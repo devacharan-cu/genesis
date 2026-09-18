@@ -38,6 +38,13 @@ importers:
       '@genesis/ledger':
         specifier: workspace:*
         version: link:../ledger
+      '@genesis/memory':
+        specifier: workspace:*
+        version: link:../memory
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/core-types:
     dependencies:
@@ -50,6 +57,23 @@ importers:
       '@genesis/core-types':
         specifier: workspace:*
         version: link:../core-types
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
+  packages/memory:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/testkit:
     dependencies:
@@ -59,6 +83,9 @@ importers:
       '@genesis/ledger':
         specifier: workspace:*
         version: link:../ledger
+      '@genesis/memory':
+        specifier: workspace:*
+        version: link:../memory
     devDependencies:
       vitest:
         specifier: 2.1.9

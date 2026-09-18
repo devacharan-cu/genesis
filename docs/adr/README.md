@@ -25,6 +25,7 @@ listed downsides has not been thought through.
 | [0008](0008-project-scoping.md) | Multi-project from the start: mandatory, immutable `projectId` | Accepted |
 | [0009](0009-ledger-hash-chain.md) | Per-project hash chain over sequenced ledger events | Accepted |
 | [0010](0010-node-sqlite-driver.md) | Built-in `node:sqlite` driver for the P1 adapters | Accepted |
+| [0011](0011-write-time-authority-policy.md) | Write-time authority policy: clamp, and record the clamp | Accepted |
 
 ## Statuses
 

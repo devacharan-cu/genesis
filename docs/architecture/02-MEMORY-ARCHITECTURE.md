@@ -86,12 +86,15 @@ Every memory record, regardless of class:
 
 ```
 MEMORY_RECORD
-  id              mem_01J...                ULID
+  id              mem_01J...                ULID, unique per VERSION
+  logicalId       mem_01J...                stable across versions; equals `id` at version 1
   projectId       prj_01J...                mandatory, immutable (ADR-0008)
   class           <MemoryClass>
   type            string                    // class-specific subtype, e.g. "api-behaviour"
   content         { statement: string, body?: unknown }
-  authority       <Authority>
+  authority       <Authority>                effective, after the write-time policy (§4.2)
+  authorityRequested <Authority>             what the writer asked for, before clamping
+  authorityClamps [<ClampReason>]            why it was reduced; empty when it was not
   status          ACTIVE | SUPERSEDED | SUPERSEDED_BY_AUTHORITY | CONTRADICTED | ARCHIVED | RETRACTED
   createdAt       ISO-8601
   updatedAt       ISO-8601
@@ -173,7 +176,47 @@ Rank 1 is highest. Meaning:
 - Nothing promotes itself. A reasoning call cannot assert its own authority
   level; the writer clamps model-sourced records to `AI_ASSUMPTION`.
 
-### 4.2 Demotion
+### 4.2 Write-time authority policy
+
+§4.1 describes how a record's authority may be *promoted* over its life. This
+section states what a record may claim **at the moment it is written**, which is
+where the guarantee is actually enforced. See
+[ADR-0011](../adr/0011-write-time-authority-policy.md).
+
+Three ceilings are applied in order. Each can only lower the authority, never
+raise it. The lowest result wins.
+
+| # | Ceiling | Rule | Clamp reason |
+|---|---|---|---|
+| 1 | **Actor** | `HUMAN` → `HUMAN_DECISION`, `SYSTEM` → `VERIFIED_SYSTEM_STATE`, `AGENT` → `EVIDENCE` | `ACTOR_CEILING` |
+| 2 | **Model provenance** | Any `sourceRef` of kind `MODEL` → `AI_ASSUMPTION`, regardless of actor | `MODEL_SOURCED` |
+| 3 | **Grounding** | `EVIDENCE` and `VERIFIED_SYSTEM_STATE` require ≥1 `evidenceRef`; `ACTIVE_REQUIREMENT` requires ≥1 related `REQUIREMENT` entity. Otherwise → `AI_ASSUMPTION` | `NO_EVIDENCE`, `NO_REQUIREMENT_LINK` |
+
+Ceiling 2 is what makes the guarantee absolute: **an agent's own claim is
+model-sourced, so it lands at `AI_ASSUMPTION` and cannot promote itself, no
+matter what it asks for.** Promotion from there requires a *later* event
+supplying higher-authority support (§4.1) — never the same write.
+
+**Clamping is recorded, not silent.** The record keeps `authorityRequested`
+alongside the effective `authority`, plus the `authorityClamps` that explain the
+reduction. A silent clamp would hide a miscalibrated agent; a recorded one is
+the calibration signal ADR-0006 §4.1 calls for. Querying for records where the
+two differ answers "which components over-claim, and how often?".
+
+Clamping rather than rejecting is deliberate here, and differs from the event
+ledger, which *rejects* an over-reaching authority. The difference is what the
+two are for: an event is an immutable statement about what happened, so writing
+one at a different authority than the caller stated would make the ledger
+disagree with its own caller. A memory record is an interpretation, and the
+honest response to an over-claimed interpretation is to keep it at the level it
+can actually support rather than to discard the content.
+
+**Known wart:** `AI_ASSUMPTION` is also the floor for an *ungrounded* claim by a
+human or the system, where the name does not fit what happened. The authority
+levels are fixed by the project brief, so this is recorded as open decision
+**E11** rather than worked around by inventing a level.
+
+### 4.3 Demotion
 
 When a requirement is retired, its records move to `HISTORICAL` via an event.
 When the real system changes, previous `VERIFIED_SYSTEM_STATE` records become
@@ -186,16 +229,25 @@ record.
 
 When two records make incompatible claims about the same subject:
 
-1. Both records are retained with `status: ACTIVE` until step 3.
+1. Both records are retained. Neither is deleted at any point.
 2. A symmetric `CONTRADICTS` link is written on both records and a
    `CONTRADICTS` edge in the graph.
 3. Authority is compared:
    - **Strictly higher on one side** → the lower side moves to
      `SUPERSEDED_BY_AUTHORITY`. It remains readable and is still returned by
      explicit history queries; it is excluded from default context assembly.
-   - **Equal or indeterminate** → both remain `ACTIVE` and marked
-     `CONTRADICTED`; an uncertainty is opened
-     (`01-COGNITIVE-ARCHITECTURE.md` §8) and an issue is created.
+     The governing side keeps its status unchanged.
+   - **Equal or indeterminate** → **both** move to `CONTRADICTED`; an
+     uncertainty is opened (`01-COGNITIVE-ARCHITECTURE.md` §8) and an issue is
+     created.
+
+   An earlier draft said the equal case leaves both `ACTIVE` *and* marks them
+   `CONTRADICTED`. `status` is one field, so that was not implementable as
+   written. The resolution: `CONTRADICTED` is the status, and — unlike the
+   `SUPERSEDED*` statuses — **`CONTRADICTED` records remain visible to default
+   queries**, because the conflict is unresolved and both sides still stand.
+   Hiding them would be the silent overwrite this whole section exists to
+   prevent. See §7 for exactly which statuses are visible by default.
 4. A `CONTRADICTION_DETECTED` event is appended with both record ids.
 5. Any proposal touching the affected nodes is blocked at `POLICY_CHECK` until
    resolved or explicitly overridden by a human.
@@ -249,23 +301,45 @@ The core depends on this, not on any database:
 
 ```ts
 interface MemoryStore {
-  put(record: NewMemoryRecord, ctx: WriteContext): Promise<MemoryRecord>;
+  put(scope: ProjectScope, record: NewMemoryRecord, ctx: WriteContext): Promise<MemoryRecord>;
+  putVersion(scope: ProjectScope, logicalId: MemoryId, record: NewMemoryRecord, ctx: WriteContext): Promise<MemoryRecord>;
   get(scope: ProjectScope, id: MemoryId): Promise<MemoryRecord | null>;
+  current(scope: ProjectScope, logicalId: MemoryId): Promise<MemoryRecord | null>;
   history(scope: ProjectScope, logicalId: MemoryId): Promise<MemoryRecord[]>;
   query(scope: ProjectScope, q: MemoryQuery): Promise<Page<MemoryRecord>>;
-  link(scope: ProjectScope, a: MemoryId, b: MemoryId, kind: 'CONTRADICTS' | 'SUPERSEDES'): Promise<void>;
-  transition(scope: ProjectScope, id: MemoryId, status: MemoryStatus, cause: EventId): Promise<MemoryRecord>;
+  link(scope: ProjectScope, a: MemoryId, b: MemoryId, kind: 'CONTRADICTS' | 'SUPERSEDES'): Promise<LinkOutcome>;
+  links(scope: ProjectScope, id: MemoryId): Promise<MemoryLink[]>;
+  transition(scope: ProjectScope, id: MemoryId, status: MemoryStatus, cause: EventId | null): Promise<MemoryRecord>;
+  close(): Promise<void>;
 }
 ```
+
+**`put` takes the scope**, and stamps `projectId` from it rather than trusting a
+caller-supplied value — the same rule the ledger follows. A caller cannot write
+a record into a project it is not scoped to.
 
 Every read takes a `ProjectScope` as its first argument, so an unscoped query is
 not expressible ([ADR-0008](../adr/0008-project-scoping.md)). `link` requires
 both records to be in the scoped project; a cross-project link is a typed error.
 
+**`link` returns a `LinkOutcome`** describing what the link did to each record's
+status — which side governs, which was superseded by authority, or that the
+conflict is unresolved. Returning `void` would mean the caller had to re-read
+both records to discover whether a contradiction had been resolved or left open,
+and the difference matters: an unresolved one is supposed to raise a question.
+
 `MemoryQuery` supports filtering by class, type, authority range, status,
 related entity, tag, validity window, and free text — plus an explicit
-`includeNonActive` flag that defaults to `false`. Retrieval for context
-assembly never silently includes superseded records.
+`includeNonActive` flag that defaults to `false`.
+
+**Default visibility.** With `includeNonActive: false`, a query returns records
+whose status is `ACTIVE` **or `CONTRADICTED`**, and only the latest version of
+each logical record. `SUPERSEDED`, `SUPERSEDED_BY_AUTHORITY`, `ARCHIVED` and
+`RETRACTED` are excluded. `CONTRADICTED` is included deliberately: the conflict
+is unresolved and both sides still stand, so hiding them would be the silent
+overwrite §5 exists to prevent. Retrieval for context assembly never silently
+includes superseded records, but it must never silently hide live disagreement
+either.
 
 Adapters: SQLite (P1, local), DynamoDB (P8, cloud). Both must pass the same
 conformance test suite. See [ADR-0003](../adr/0003-ports-and-adapters-persistence.md).

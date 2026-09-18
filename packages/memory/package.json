@@ -1,16 +1,15 @@
 {
-  "name": "@genesis/adapters-sqlite",
+  "name": "@genesis/memory",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "SQLite storage adapters for the P1 ports. The only package permitted to import node:sqlite (ADR-0010).",
+  "description": "MemoryStore port, write-time authority policy and contradiction preservation.",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
     "@genesis/core-types": "workspace:*",
-    "@genesis/ledger": "workspace:*",
-    "@genesis/memory": "workspace:*"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@genesis/testkit": "workspace:*"

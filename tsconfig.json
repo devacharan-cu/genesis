@@ -28,6 +28,7 @@
     "paths": {
       "@genesis/core-types": ["packages/core-types/src/index.ts"],
       "@genesis/ledger": ["packages/ledger/src/index.ts"],
+      "@genesis/memory": ["packages/memory/src/index.ts"],
       "@genesis/adapters-sqlite": ["packages/adapters-sqlite/src/index.ts"],
       "@genesis/testkit": ["packages/testkit/src/index.ts"]
     }

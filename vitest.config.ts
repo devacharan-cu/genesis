@@ -23,6 +23,9 @@ const SAFETY_CRITICAL = [
   'packages/ledger/src/verify.ts', // integrity verification
   'packages/core-types/src/scope.ts', // project isolation enforcement (ADR-0008)
   'packages/core-types/src/authority.ts', // authority ordering and clamping (ADR-0005)
+  'packages/memory/src/authority-policy.ts', // write-time authority ceilings (ADR-0011)
+  'packages/memory/src/contradiction.ts', // contradiction preservation (SPEC-02 §5)
+  'packages/memory/src/build.ts', // the only path to an effective authority
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -34,6 +37,7 @@ export default defineConfig({
     alias: {
       '@genesis/core-types': pkg('core-types'),
       '@genesis/ledger': pkg('ledger'),
+      '@genesis/memory': pkg('memory'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/testkit': pkg('testkit'),
     },

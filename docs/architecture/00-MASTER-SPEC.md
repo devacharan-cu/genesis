@@ -463,6 +463,7 @@ Full rationale lives in `docs/adr/`. Summary:
 | Multi-project | Mandatory immutable `projectId` on all state; scope-typed reads | [ADR-0008](../adr/0008-project-scoping.md) |
 | Ledger integrity | Per-project hash chain over sequenced events | [ADR-0009](../adr/0009-ledger-hash-chain.md) |
 | SQLite driver | Built-in `node:sqlite`, no native build step | [ADR-0010](../adr/0010-node-sqlite-driver.md) |
+| Write-time authority | Clamp to the ceiling, and persist what was clamped | [ADR-0011](../adr/0011-write-time-authority-policy.md) |
 
 ---
 
