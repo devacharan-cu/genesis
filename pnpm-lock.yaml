@@ -35,6 +35,9 @@ importers:
       '@genesis/core-types':
         specifier: workspace:*
         version: link:../core-types
+      '@genesis/graph':
+        specifier: workspace:*
+        version: link:../graph
       '@genesis/ledger':
         specifier: workspace:*
         version: link:../ledger
@@ -51,6 +54,19 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+
+  packages/graph:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/ledger:
     dependencies:
@@ -80,6 +96,9 @@ importers:
       '@genesis/core-types':
         specifier: workspace:*
         version: link:../core-types
+      '@genesis/graph':
+        specifier: workspace:*
+        version: link:../graph
       '@genesis/ledger':
         specifier: workspace:*
         version: link:../ledger

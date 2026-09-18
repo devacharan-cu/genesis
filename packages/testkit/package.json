@@ -10,7 +10,8 @@
   "dependencies": {
     "@genesis/core-types": "workspace:*",
     "@genesis/ledger": "workspace:*",
-    "@genesis/memory": "workspace:*"
+    "@genesis/memory": "workspace:*",
+    "@genesis/graph": "workspace:*"
   },
   "devDependencies": {
     "vitest": "2.1.9"

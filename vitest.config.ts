@@ -26,6 +26,8 @@ const SAFETY_CRITICAL = [
   'packages/memory/src/authority-policy.ts', // write-time authority ceilings (ADR-0011)
   'packages/memory/src/contradiction.ts', // contradiction preservation (SPEC-02 §5)
   'packages/memory/src/build.ts', // the only path to an effective authority
+  'packages/graph/src/invariants.ts', // G1-G13 enforcement (SPEC-03 §4)
+  'packages/graph/src/traversal.ts', // depth caps and project-scoped walks (G12)
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -38,6 +40,7 @@ export default defineConfig({
       '@genesis/core-types': pkg('core-types'),
       '@genesis/ledger': pkg('ledger'),
       '@genesis/memory': pkg('memory'),
+      '@genesis/graph': pkg('graph'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/testkit': pkg('testkit'),
     },

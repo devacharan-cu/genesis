@@ -1,0 +1,17 @@
+{
+  "name": "@genesis/graph",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GraphStore port, node/edge schemas, invariants G1-G13 and impact analysis.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}
