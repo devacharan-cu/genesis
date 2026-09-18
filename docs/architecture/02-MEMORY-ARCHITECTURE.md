@@ -87,6 +87,7 @@ Every memory record, regardless of class:
 ```
 MEMORY_RECORD
   id              mem_01J...                ULID
+  projectId       prj_01J...                mandatory, immutable (ADR-0008)
   class           <MemoryClass>
   type            string                    // class-specific subtype, e.g. "api-behaviour"
   content         { statement: string, body?: unknown }
@@ -249,13 +250,17 @@ The core depends on this, not on any database:
 ```ts
 interface MemoryStore {
   put(record: NewMemoryRecord, ctx: WriteContext): Promise<MemoryRecord>;
-  get(id: MemoryId): Promise<MemoryRecord | null>;
-  history(logicalId: MemoryId): Promise<MemoryRecord[]>;
-  query(q: MemoryQuery): Promise<Page<MemoryRecord>>;
-  link(a: MemoryId, b: MemoryId, kind: 'CONTRADICTS' | 'SUPERSEDES'): Promise<void>;
-  transition(id: MemoryId, status: MemoryStatus, cause: EventId): Promise<MemoryRecord>;
+  get(scope: ProjectScope, id: MemoryId): Promise<MemoryRecord | null>;
+  history(scope: ProjectScope, logicalId: MemoryId): Promise<MemoryRecord[]>;
+  query(scope: ProjectScope, q: MemoryQuery): Promise<Page<MemoryRecord>>;
+  link(scope: ProjectScope, a: MemoryId, b: MemoryId, kind: 'CONTRADICTS' | 'SUPERSEDES'): Promise<void>;
+  transition(scope: ProjectScope, id: MemoryId, status: MemoryStatus, cause: EventId): Promise<MemoryRecord>;
 }
 ```
+
+Every read takes a `ProjectScope` as its first argument, so an unscoped query is
+not expressible ([ADR-0008](../adr/0008-project-scoping.md)). `link` requires
+both records to be in the scoped project; a cross-project link is a typed error.
 
 `MemoryQuery` supports filtering by class, type, authority range, status,
 related entity, tag, validity window, and free text — plus an explicit
@@ -271,10 +276,10 @@ conformance test suite. See [ADR-0003](../adr/0003-ports-and-adapters-persistenc
 
 | Concern | SQLite (P1) | AWS (P8) |
 |---|---|---|
-| Records | `memory_records` table, JSON1 for `content` | DynamoDB single-table, PK `mem#<id>` |
-| Versions | `previous_version` FK + partial index on `status='ACTIVE'` | Sort key `v#<n>`, GSI on logical id |
-| Links | `memory_links(a,b,kind)` | Adjacency items |
-| Text search | FTS5 virtual table | OpenSearch or DynamoDB + embedding store (P3 decision) |
+| Records | `memory_records` table, PK `(project_id, id)`, JSON1 for `content` | DynamoDB single-table, PK `prj#<projectId>#mem#<id>` |
+| Versions | `previous_version` FK + partial index on `(project_id, status='ACTIVE')` | Sort key `v#<n>`, GSI on logical id within the project partition |
+| Links | `memory_links(project_id, a, b, kind)` | Adjacency items under the project partition |
+| Text search | FTS5 virtual table, `project_id` in every query | OpenSearch or DynamoDB + embedding store (P3 decision) |
 | Raw evidence blobs | Local blob dir, content-addressed | S3, content-addressed, versioning on |
 | Archive tier | Same table, `status='ARCHIVED'` | S3 / DynamoDB TTL to archive table |
 

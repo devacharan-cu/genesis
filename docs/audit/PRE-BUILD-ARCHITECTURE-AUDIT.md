@@ -282,3 +282,36 @@ yet — which is, appropriately, exactly the state the system itself would recor
 as `ASSUMED`.
 
 **Recommendation:** answer E2, E9 and E10, then begin P1 slice 1.
+
+---
+
+## G. Human decisions received (2026-09-18)
+
+The three blocking decisions were answered. Recorded here with authority
+`HUMAN_DECISION`; the documents were amended accordingly and the amendments are
+listed so the change is not silent (development rule 11).
+
+| # | Decision | Documents amended |
+|---|---|---|
+| **E2** | **Yes** — `UNCERTAINTY` becomes a first-class `NodeType`. | SPEC-00 §4.7 (canonical block), SPEC-03 §2 (canonical block + attrs), §3.1 (`BLOCKS` endpoints), §4 (new invariant G13), SPEC-01 §7 |
+| **E9** | **Replaced** — the arbitrary ≥90% line-coverage requirement is gone. | SPEC-00 §8 (P1 exit criteria) and new §8.1 *Coverage policy*: 100% **branch** coverage on an explicit list of safety-critical modules, 80% line coverage repo-wide as a floor |
+| **E10** | **Yes** — multi-project from the start; all project-scoped state carries `projectId`. | SPEC-00 §5, §7 (event shape); SPEC-01 §7; SPEC-02 §3, §7, §8; SPEC-03 §2, §3, §4 (G11–G12), §5, §6; new [ADR-0008](../adr/0008-project-scoping.md) |
+
+Two further decisions were required to implement E10 and are recorded as ADRs
+rather than made silently:
+
+- **[ADR-0009](../adr/0009-ledger-hash-chain.md)** — per-project hash chain over
+  sequenced events. E10 makes ledgers per-project, which needed a per-project
+  ordering (`seq`) that ULIDs alone did not provide. Having introduced sequence
+  numbers, making append-only a *verifiable* property rather than a policy was a
+  small additional step and closes a real weakness in ADR-0004: nothing
+  previously detected a retroactive edit.
+- **[ADR-0010](../adr/0010-node-sqlite-driver.md)** — use the built-in
+  `node:sqlite` driver rather than a native addon, so `pnpm install` cannot fail
+  on a compile step. Confined to one package and reversible by passing the same
+  conformance suite.
+
+### Status of the remaining open decisions
+
+E1, E3–E8 are unchanged and not blocking. **E1** (how long-running experiments
+rejoin the loop) remains the highest-value one to settle before P5.

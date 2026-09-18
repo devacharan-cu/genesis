@@ -43,6 +43,7 @@ ISSUE
 CHANGE
 EVIDENCE
 BELIEF
+UNCERTAINTY
 QUESTION
 EXPERIMENT
 DEPLOYMENT
@@ -54,6 +55,7 @@ Common node shape:
 ```
 NODE
   id          <type>_01J...
+  projectId   prj_01J...             // mandatory; every node belongs to one project
   type        <NodeType>
   label       string                 // short human-readable
   recordRef   mem_... | evt_... | null
@@ -61,6 +63,11 @@ NODE
   attrs       type-specific, small and queryable
   createdAt, updatedAt, version
 ```
+
+`projectId` is mandatory and immutable — see
+[ADR-0008](../adr/0008-project-scoping.md). A node cannot be moved between
+projects; it is superseded in one and recreated in the other, so the history of
+both stays truthful.
 
 Type-specific `attrs` worth fixing now:
 
@@ -75,6 +82,7 @@ Type-specific `attrs` worth fixing now:
 | `CHANGE` | `lifecycleState: <ChangeLifecycle>`, `proposalId`, `diffRef` |
 | `EVIDENCE` | `observationKind`, `rawRef`, `hash` |
 | `BELIEF` | `state: <BeliefState>` |
+| `UNCERTAINTY` | `risk: LOW\|MEDIUM\|HIGH\|CRITICAL`, `blocking: bool`, `resolution: <UncertaintyResolution>`, `status` |
 | `DEPLOYMENT` | `environment: SANDBOX\|STAGING\|PRODUCTION`, `verificationState` |
 | `EVENT` | `eventType`, `actorKind` |
 
@@ -112,7 +120,7 @@ Common edge shape:
 
 ```
 EDGE
-  id, type <EdgeType>, from nodeId, to nodeId,
+  id, projectId, type <EdgeType>, from nodeId, to nodeId,
   authority <Authority>,          // how well-established this relationship is
   evidenceRefs [mem_...],
   weight number | null,
@@ -146,7 +154,7 @@ authority.
 | `SUPERSEDES` | A replaces B | same-type→same-type |
 | `DERIVED_FROM` | A was derived from B | any→any |
 | `REQUIRES` | A cannot proceed without B | `GOAL`/`CHANGE`/`FEATURE`→any |
-| `BLOCKS` | A prevents B proceeding | `ISSUE`/`QUESTION`→`GOAL`/`CHANGE` |
+| `BLOCKS` | A prevents B proceeding | `ISSUE`/`QUESTION`/`UNCERTAINTY`→`GOAL`/`CHANGE` |
 | `ACHIEVES` | A advances goal B | `CHANGE`/`FEATURE`/`EXPERIMENT`→`GOAL` |
 
 Endpoint legality is validated on write against a table in code. An illegal edge
@@ -170,13 +178,22 @@ Checked by `GraphStore` on write, and by a periodic consistency job:
 | G8 | Every `REQUIREMENT` with `inForce: true` and no inbound `IMPLEMENTS` opens an uncertainty | Open uncertainty, do not block |
 | G9 | Every `REQUIREMENT` with inbound `IMPLEMENTS` but no inbound `VERIFIES` opens an uncertainty | Open uncertainty, do not block |
 | G10 | Nodes are never hard-deleted; deletion is `DELETED_LOGICALLY` | Reject hard delete |
+| G11 | An edge's `projectId` equals both endpoints' `projectId`. No edge crosses a project boundary | Reject write |
+| G12 | Every traversal is project-scoped: a traversal starting in project P never returns a node outside P | Reject query / fail closed |
+| G13 | An `UNCERTAINTY` node with `blocking: true` and `status: OPEN` has ≥1 outbound `BLOCKS` edge | Auto-open issue; do not block the write |
 
 Note on G3: real codebases contain dependency cycles. The invariant applies to
 the **architectural** `COMPONENT` layer, where a cycle is a design defect worth
 blocking. `FILE`-level cycles are recorded as issues, not rejected.
 
-G8 and G9 are the mechanism by which the graph itself generates uncertainties —
-the structure notices its own gaps.
+G8, G9 and G13 are the mechanism by which the graph itself generates
+uncertainties and keeps them visible — the structure notices its own gaps.
+
+G11 and G12 are the structural half of multi-project isolation
+([ADR-0008](../adr/0008-project-scoping.md)). They are what make "project A's
+data cannot leak into project B's context" a checkable property rather than a
+convention. G12 fails **closed**: a traversal that cannot establish its project
+scope returns an error, never an unscoped result.
 
 ---
 
@@ -186,24 +203,30 @@ the structure notices its own gaps.
 interface GraphStore {
   addNode(n: NewNode, ctx: WriteContext): Promise<Node>;
   addEdge(e: NewEdge, ctx: WriteContext): Promise<Edge>;
-  getNode(id: NodeId): Promise<Node | null>;
-  neighbourhood(id: NodeId, opts: {
+  getNode(scope: ProjectScope, id: NodeId): Promise<Node | null>;
+  neighbourhood(scope: ProjectScope, id: NodeId, opts: {
     depth: number;                 // hard-capped, default 3
     edgeTypes?: EdgeType[];
     direction?: 'out' | 'in' | 'both';
     minAuthority?: Authority;
     limit: number;                 // mandatory
   }): Promise<Subgraph>;
-  impactSet(id: NodeId, opts?: { maxDepth?: number }): Promise<NodeId[]>;
-  paths(from: NodeId, to: NodeId, opts: { maxDepth: number; edgeTypes?: EdgeType[] }): Promise<Path[]>;
-  findOrphans(criteria: OrphanCriteria): Promise<Node[]>;   // powers G8/G9
-  transitionNode(id: NodeId, status: NodeStatus, cause: EventId): Promise<Node>;
+  impactSet(scope: ProjectScope, id: NodeId, opts?: { maxDepth?: number }): Promise<NodeId[]>;
+  paths(scope: ProjectScope, from: NodeId, to: NodeId, opts: { maxDepth: number; edgeTypes?: EdgeType[] }): Promise<Path[]>;
+  findOrphans(scope: ProjectScope, criteria: OrphanCriteria): Promise<Node[]>;  // powers G8/G9/G13
+  transitionNode(scope: ProjectScope, id: NodeId, status: NodeStatus, cause: EventId): Promise<Node>;
 }
 ```
 
 `limit` is mandatory and `depth` is capped so that no query can accidentally
 pull the whole graph into a model context — the anti-pattern this architecture
 exists to avoid.
+
+`ProjectScope` is a required first parameter on every read, so an unscoped query
+is not expressible in the type system rather than merely discouraged
+([ADR-0008](../adr/0008-project-scoping.md)). Passing a node id from a different
+project than the scope is a typed error, not an empty result — an empty result
+would be indistinguishable from "no such node" and would hide the bug.
 
 ### 5.1 Impact analysis
 
@@ -220,10 +243,15 @@ contradiction blocking.
 
 | Concern | SQLite (P1) | AWS (P8) |
 |---|---|---|
-| Nodes | `graph_nodes(id, type, label, status, attrs JSON, ...)` | DynamoDB item `node#<id>` |
-| Edges | `graph_edges(id, type, from_id, to_id, authority, status, ...)` with indexes on `(from_id,type)` and `(to_id,type)` | Adjacency items + GSI on `to` |
-| Traversal | Recursive CTE, depth-capped | Neptune / Neptune Analytics (Gremlin) |
+| Nodes | `graph_nodes(project_id, id, type, label, status, attrs JSON, ...)`, PK `(project_id, id)` | DynamoDB PK `prj#<projectId>#node#<id>` |
+| Edges | `graph_edges(project_id, id, type, from_id, to_id, authority, status, ...)` with indexes on `(project_id, from_id, type)` and `(project_id, to_id, type)` | Adjacency items under the project partition + GSI on `to` |
+| Traversal | Recursive CTE, depth-capped, `project_id` bound in every recursive step | Neptune with `projectId` as a mandatory property predicate, or one graph per project |
 | Invariants | SQL constraints + application checks | Application checks + DynamoDB conditional writes |
+
+Every index leads with `project_id`, so the isolation property holds at the
+storage layer and not only in application code. A query that omits it cannot use
+an index — which is a performance cliff that surfaces the mistake immediately
+rather than silently returning another project's rows.
 
 Both adapters must pass one shared conformance suite covering every invariant in
 §4 and every query in §5. A traversal correctness suite compares SQLite CTE

@@ -242,11 +242,17 @@ ISSUE
 CHANGE
 EVIDENCE
 BELIEF
+UNCERTAINTY
 QUESTION
 EXPERIMENT
 DEPLOYMENT
 EVENT
 ```
+
+`UNCERTAINTY` was added after the Phase-0 audit (open decision **E2**). Without
+it, uncertainties were part of canonical state but invisible to graph traversal,
+so impact analysis could not see the gaps the system exists to find, and
+`BLOCKS` had no legal endpoint for them.
 
 ### 4.8 Graph edge types
 
@@ -278,9 +284,15 @@ Semantics and legal endpoint pairs: `03-GRAPH-ARCHITECTURE.md`.
 
 ## 5. Canonical project state
 
-There is exactly one canonical project state. Agents do not maintain private
-copies of project truth; they hold task-scoped context assembled from it and
-they propose changes back to it.
+There is exactly one canonical project state **per project**. GENESIS manages
+several projects concurrently, and every record, event, node, edge and
+projection is scoped by a mandatory, immutable `projectId`
+([ADR-0008](../adr/0008-project-scoping.md)). "The canonical state" always means
+the state of one named project; there is no global state above it beyond the
+project registry itself.
+
+Agents do not maintain private copies of project truth; they hold task-scoped
+context assembled from one project's state and they propose changes back to it.
 
 The state comprises these slices:
 
@@ -311,6 +323,12 @@ The state comprises these slices:
 **Rule:** the event ledger is the write-ahead truth. Every other slice is either
 an immutable record set or a projection that can be rebuilt by replaying events.
 If a projection and the ledger disagree, the projection is rebuilt.
+
+**Scoping rule:** every row in every slice carries `projectId`. Every read is
+project-scoped at the type level, so an unscoped query is not expressible rather
+than merely discouraged. Cross-project references are illegal and rejected on
+write. The one exception is the project registry, which lists projects and is
+scoped by account, not by project.
 
 ---
 
@@ -346,6 +364,9 @@ of history, audit, explanation and reconstruction.
 ```
 EVENT
   id            evt_01J...            ULID, monotonic
+  projectId     prj_01J...            mandatory; the partition this event belongs to
+  seq           integer               per-project, gapless, assigned on append
+  schemaVersion 1                     for upcasting on read
   type          REQUIREMENT_CHANGED
   actor         { kind: HUMAN | AGENT | SYSTEM, id, agentRole? }
   subject       { nodeType, nodeId }
@@ -355,11 +376,18 @@ EVENT
   cycleId       cyc_01J... | null
   authority     HUMAN_DECISION
   timestamp     2026-09-18T06:20:00Z
-  payloadHash   sha256:...
+  payloadHash   sha256:...            hash of this event's content
+  prevHash      sha256:... | null     hash of the previous event in this project
 ```
 
 Events are never updated or deleted. A mistaken event is corrected by appending
 a compensating event that `SUPERSEDES` it.
+
+`seq`, `payloadHash` and `prevHash` together form a per-project **hash chain**:
+each event commits to its predecessor, so any retroactive edit or deletion
+breaks verification at that point and every point after it. Integrity becomes a
+property that can be checked rather than a policy that is trusted. See
+[ADR-0009](../adr/0009-ledger-hash-chain.md).
 
 ---
 
@@ -371,7 +399,7 @@ criteria are met by executed tests, not by inspection.
 | Phase | Name | Contents | Exit criteria |
 |---|---|---|---|
 | **P0** | Pre-build architecture | This document set, ADRs, audit | Docs checker green; audit accepted by human |
-| **P1** | Core state substrate | Types, storage ports, SQLite adapter, event ledger, graph store, memory store | Ledger replay reconstructs state; ≥90% line coverage on core |
+| **P1** | Core state substrate | Types, storage ports, SQLite adapter, event ledger, graph store, memory store | Ledger replay reconstructs state; hash chain verifies; project isolation holds; coverage policy §8.1 met |
 | **P2** | Cognitive primitives | World/self model, goals, beliefs, uncertainty, contradiction engine | Property tests on authority resolution and contradiction preservation |
 | **P3** | Inquiry | Question engine, scoring module, context assembly | Question scoring is deterministic and unit-tested; scorer is swappable |
 | **P4** | Reasoning provider | `ReasoningProvider` port, mock adapter, Bedrock adapter | Core test suite passes with mock adapter only |
@@ -381,6 +409,41 @@ criteria are met by executed tests, not by inspection.
 | **P8** | AWS deployment | Adapters for DynamoDB/Neptune/S3, Step Functions orchestration, Cognito | Same core test suite passes against cloud adapters |
 
 Nothing in P7 is implemented before P1–P5 are green. This is a hard rule.
+
+### 8.1 Coverage policy
+
+An earlier draft required "≥90% line coverage on core". That number was
+arbitrary, and line coverage is the wrong instrument: it rewards executing code,
+not exercising its decisions. A module full of guard clauses can reach 90% lines
+with every guard untested.
+
+The policy is therefore two-tier:
+
+| Tier | Requirement |
+|---|---|
+| **Safety-critical modules** | **100% branch coverage**, enforced per file. Every decision point must be exercised in both directions. |
+| Everything else | 80% line coverage as a floor, repo-wide — a smoke alarm, not a target |
+
+A module is **safety-critical** when a silent failure in it would let the system
+believe something untrue, or let an untrusted component write truth. The list is
+explicit, lives in the coverage configuration, and grows as those components are
+built:
+
+1. Authority assignment and clamping — the rule that model output cannot promote
+   itself (ADR-0005)
+2. The evidence writer — hash verification and the no-model-authored rule
+   (SPEC-05 §4)
+3. Ledger append path — append-only enforcement, sequence assignment, hash chain
+   (ADR-0004, ADR-0009)
+4. Event schema upcasting — a wrong upcast silently rewrites history
+5. Project scope enforcement — every boundary where a `projectId` is checked
+   (ADR-0008)
+6. Graph invariant enforcement — G1–G13 (SPEC-03 §4)
+7. Verification state transitions and their entry requirements (SPEC-05 §2)
+8. Policy check and authorization gates (SPEC-06 §7)
+
+Adding a file to this list is a one-line config change. Removing one requires an
+ADR, because it is a deliberate reduction in what the project guarantees.
 
 ---
 
@@ -397,6 +460,9 @@ Full rationale lives in `docs/adr/`. Summary:
 | Conflict resolution | Authority hierarchy, not confidence scores | [ADR-0005](../adr/0005-authority-over-confidence.md) |
 | State mutation | Agents propose; core applies | [ADR-0006](../adr/0006-proposal-based-mutation.md) |
 | LLM integration | `ReasoningProvider` port; Bedrock first adapter | [ADR-0007](../adr/0007-reasoning-provider-port.md) |
+| Multi-project | Mandatory immutable `projectId` on all state; scope-typed reads | [ADR-0008](../adr/0008-project-scoping.md) |
+| Ledger integrity | Per-project hash chain over sequenced events | [ADR-0009](../adr/0009-ledger-hash-chain.md) |
+| SQLite driver | Built-in `node:sqlite`, no native build step | [ADR-0010](../adr/0010-node-sqlite-driver.md) |
 
 ---
 

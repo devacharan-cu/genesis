@@ -98,7 +98,7 @@ failing.
 | Phase | Contents | Status |
 |---|---|---|
 | **P0** | Architecture, ADRs, audit | ✅ Complete |
-| **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | ⬜ Next |
+| **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟡 In progress — slice 1 |
 | **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | ⬜ |
 | **P3** | Inquiry: question engine, scoring, context assembly | ⬜ |
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | ⬜ |

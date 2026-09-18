@@ -215,7 +215,8 @@ Unknowns are first-class records, not the absence of records.
 
 ```
 UNCERTAINTY
-  id, statement,
+  id, projectId,
+  statement,
   impact        WHAT_BREAKS_IF_WRONG (text) + affectedRefs[{nodeType,nodeId}]
   risk          LOW|MEDIUM|HIGH|CRITICAL
   blocking      bool                     // blocks the active goal
@@ -224,6 +225,13 @@ UNCERTAINTY
   relatedBeliefs [beliefId], relatedQuestions [questionId]
   openedAt, resolvedAt?, resolutionEvidence [evidenceId]
 ```
+
+Each uncertainty is also an `UNCERTAINTY` node in the knowledge graph
+([`03-GRAPH-ARCHITECTURE.md`](03-GRAPH-ARCHITECTURE.md) §2), so it is reachable
+by traversal and can be a legal `BLOCKS` endpoint. Without that, uncertainties
+would be invisible to impact analysis — the engine whose whole job is finding
+gaps could not see the gaps already recorded. A blocking, open uncertainty with
+no outbound `BLOCKS` edge is itself flagged by invariant G13.
 
 ### 7.1 Detection sources
 

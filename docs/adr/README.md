@@ -22,6 +22,9 @@ listed downsides has not been thought through.
 | [0005](0005-authority-over-confidence.md) | Authority hierarchy governs conflicts, not confidence | Accepted |
 | [0006](0006-proposal-based-mutation.md) | Agents propose; only the core mutates state | Accepted |
 | [0007](0007-reasoning-provider-port.md) | `ReasoningProvider` port, Bedrock first adapter | Accepted |
+| [0008](0008-project-scoping.md) | Multi-project from the start: mandatory, immutable `projectId` | Accepted |
+| [0009](0009-ledger-hash-chain.md) | Per-project hash chain over sequenced ledger events | Accepted |
+| [0010](0010-node-sqlite-driver.md) | Built-in `node:sqlite` driver for the P1 adapters | Accepted |
 
 ## Statuses
 
