@@ -58,12 +58,24 @@ const ALLOWED_WORKSPACE_DEPS = {
   ledger: ['core-types'],
   memory: ['core-types'],
   graph: ['core-types'],
-  'adapters-sqlite': ['core-types', 'ledger', 'memory', 'graph'],
-  'adapters-aws': ['core-types', 'ledger', 'memory', 'graph'],
+  // Projections fold ledger events. No stores: a projector that could read
+  // one would depend on something other than the ledger (ADR-0013 rule 6).
+  projections: ['core-types', 'ledger'],
+  'adapters-sqlite': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
+  'adapters-aws': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
   reasoning: ['core-types'],
   sandbox: ['core-types'],
-  core: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'reasoning', 'sandbox'],
-  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph'],
+  core: [
+      'core-types',
+      'protocol',
+      'ledger',
+      'memory',
+      'graph',
+      'projections',
+      'reasoning',
+      'sandbox',
+    ],
+  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections'],
   // Agents get the protocol and the types. No stores, no core, no adapters.
   agents: ['core-types', 'protocol', 'testkit'],
 };

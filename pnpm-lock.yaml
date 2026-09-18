@@ -44,6 +44,9 @@ importers:
       '@genesis/memory':
         specifier: workspace:*
         version: link:../memory
+      '@genesis/projections':
+        specifier: workspace:*
+        version: link:../projections
     devDependencies:
       '@genesis/testkit':
         specifier: workspace:*
@@ -91,6 +94,22 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/projections:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/testkit:
     dependencies:
       '@genesis/core-types':
@@ -105,6 +124,9 @@ importers:
       '@genesis/memory':
         specifier: workspace:*
         version: link:../memory
+      '@genesis/projections':
+        specifier: workspace:*
+        version: link:../projections
     devDependencies:
       vitest:
         specifier: 2.1.9

@@ -446,6 +446,9 @@ built:
 6. Graph invariant enforcement — G1–G13 (SPEC-03 §4)
 7. Verification state transitions and their entry requirements (SPEC-05 §2)
 8. Policy check and authorization gates (SPEC-06 §7)
+9. Projection folding, and the digest that proves a replayed state equals the
+   live one — a silent failure there makes a rebuilt state that never existed
+   look authoritative ([ADR-0013](../adr/0013-projections-as-pure-folds.md))
 
 Adding a file to this list is a one-line config change. Removing one requires an
 ADR, because it is a deliberate reduction in what the project guarantees.

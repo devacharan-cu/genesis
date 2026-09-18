@@ -15,6 +15,7 @@ export type GenesisErrorCode =
   | 'CHAIN_INTEGRITY'
   | 'UNSUPPORTED_SCHEMA_VERSION'
   | 'AUTHORITY_NOT_PERMITTED'
+  | 'PROJECTION_DIVERGENCE'
   | 'NOT_FOUND';
 
 export class GenesisError extends Error {
@@ -76,6 +77,30 @@ export class ChainIntegrityError extends GenesisError {
 export class UnsupportedSchemaVersionError extends GenesisError {
   constructor(message: string, details?: Readonly<Record<string, unknown>>) {
     super('UNSUPPORTED_SCHEMA_VERSION', message, details);
+  }
+}
+
+/**
+ * Raised when two folds over identical history disagree (ADR-0013 rule 5).
+ *
+ * This is non-determinism caught in the act. It is deliberately NOT a
+ * validation error: nothing about the input was invalid, and the distinction
+ * matters because the remedy is different — a divergence means the projector
+ * itself depends on something outside the ledger.
+ */
+export class ProjectionDivergenceError extends GenesisError {
+  constructor(details: {
+    projection: string;
+    projectId: string;
+    lastSeq: number;
+    stored: string;
+    incoming: string;
+  }) {
+    super(
+      'PROJECTION_DIVERGENCE',
+      `projection ${details.projection} for project ${details.projectId} disagrees at seq ${details.lastSeq}: digest ${details.stored} vs ${details.incoming}`,
+      details,
+    );
   }
 }
 

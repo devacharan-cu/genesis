@@ -4,11 +4,18 @@ An experimental **self-questioning software intelligence**: an engineering
 system that maintains persistent, structured knowledge about a software project
 and uses it to build, test, repair, verify, deploy and maintain software.
 
-> **Current status: Phase 1, slice 1 — the core state substrate.** What exists
-> and is tested: the canonical type layer and the event ledger, with two
-> interchangeable adapters. None of the cognitive machinery described below is
-> built yet. The roadmap marks what is done and what is not, and nothing in this
-> README describes a capability that has not been executed.
+> **Current status: Phase 1 complete — the core state substrate.** What exists
+> and is tested: the canonical type layer, the hash-chained event ledger, the
+> memory store with its write-time authority policy, the knowledge graph with
+> invariants G1–G13, and projections that rebuild the world and self models from
+> the ledger and prove the rebuild equals the live state. Each of the four ports
+> has an in-memory and a SQLite adapter running one shared conformance suite.
+>
+> None of the cognitive machinery described below is built yet: there is no
+> loop, no goal system, no question engine, no reasoning provider and no agents.
+> The world and self model projections are folds over events — they record what
+> history says and nothing more. The roadmap marks what is done and what is not,
+> and nothing in this README describes a capability that has not been executed.
 
 ---
 
@@ -99,7 +106,7 @@ failing.
 | Phase | Contents | Status |
 |---|---|---|
 | **P0** | Architecture, ADRs, audit | ✅ Complete |
-| **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟡 Slice 1 done (types + ledger); slices 2–4 (memory, graph, projections) remain |
+| **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟢 Slices 1-4 done: types + hash-chained ledger, MemoryStore + authority policy, GraphStore + invariants G1-G13, projections with replay/live equivalence |
 | **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | ⬜ |
 | **P3** | Inquiry: question engine, scoring, context assembly | ⬜ |
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | ⬜ |
@@ -139,7 +146,10 @@ pnpm check:boundaries        # package dependency rules (ADR-0001)
 |---|---|
 | `packages/core-types` | Canonical enums, branded ids, monotonic ULID, project scoping, authority ordering, event schemas. Depends on no other workspace package. |
 | `packages/ledger` | `EventLedger` port, append path, hash chain, verifier, schema upcasting, in-memory adapter |
-| `packages/adapters-sqlite` | SQLite adapter. The only package permitted to import `node:sqlite` |
+| `packages/memory` | `MemoryStore` port, write-time authority policy and grounding ladder, contradiction preservation, in-memory adapter |
+| `packages/graph` | `GraphStore` port, node/edge schemas, invariants G1–G13, depth-capped traversal and impact analysis, in-memory adapter |
+| `packages/projections` | Projections as pure folds over the ledger, replay/live equivalence by digest, `ProjectionSnapshotStore` port, world and self model projectors |
+| `packages/adapters-sqlite` | SQLite adapters for all four ports. The only package permitted to import `node:sqlite` |
 | `packages/testkit` | Conformance suites written against the ports |
 
 ### On the checkers
@@ -150,11 +160,17 @@ been caught passing vacuously, once from a pattern that matched nothing and once
 from a baseline that was already failing. A checker that cannot fail reports
 green forever and everyone believes it.
 
-The same principle runs through the test suite: the two ledger adapters run the
-*same* conformance suite, so "these are interchangeable" is demonstrated rather
-than asserted; and the suite corrupts stored events to prove tampering is
+The same principle runs through the test suite: every port's two adapters run
+the *same* conformance suite, so "these are interchangeable" is demonstrated
+rather than asserted; the suite corrupts stored events to prove tampering is
 actually detected, rather than trusting that the append-only code path is the
-only way in.
+only way in; and the projection suite splits each history at every point and
+requires snapshot-plus-tail to equal a full replay, so "rebuildable from the
+ledger" is a test that runs rather than a sentence in a specification.
+
+The coverage thresholds get the same treatment. A per-file threshold whose path
+matches nothing passes silently and guarantees nothing, so each one is checked
+by deleting a test and confirming the gate goes red for that file.
 
 These check **consistency and behaviour, not correctness of the design**. None
 of them can tell you the architecture is a good one.

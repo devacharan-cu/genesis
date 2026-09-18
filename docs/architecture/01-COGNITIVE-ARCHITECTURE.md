@@ -102,6 +102,15 @@ with `SUPERSEDES`; contradictory facts are retained and linked with
 The world model is a **projection** over Semantic Memory and the graph. It can
 be rebuilt from the event ledger.
 
+> **Implemented** in `packages/projections` as a pure fold
+> ([ADR-0013](../adr/0013-projections-as-pure-folds.md)). "It can be rebuilt" is
+> a test, not a claim: replaying the ledger must produce the same digest as the
+> live fold, and a snapshot taken at *any* point plus the events after it must
+> produce that digest again. What exists is the fold over `WORLD_FACT_*` events
+> and nothing else — it records what history says, keeps contradictions open
+> rather than resolving them, and counts the event types it does not interpret
+> instead of dropping them.
+
 ---
 
 ## 4. Self model
@@ -136,6 +145,19 @@ Two rules give this teeth:
 
 `knownFailures` is populated from real failed executions only, keyed by a
 normalised failure signature so repeats are counted rather than duplicated.
+
+> **Implemented** in `packages/projections` as a pure fold over the ledger
+> ([ADR-0013](../adr/0013-projections-as-pure-folds.md)). Rule 1 is enforced
+> rather than assumed: an event claiming a capability is `AVAILABLE` with no
+> evidence reference and no human behind it is recorded as `UNAVAILABLE`, and
+> the over-claim is kept as an anomaly. `knownFailures` counts `EXECUTION_FAILED`
+> events by signature.
+>
+> What is **not** implemented: the freshness window in rule 1. Deciding that a
+> capability has gone stale needs a clock, and a clock inside the fold would make
+> the projection depend on when it was run — so that belongs to the component
+> reading this state, and is not built yet. Rule 2's state is representable
+> (`hasOpenUncertainty`); the engine that opens those uncertainties is P3.
 
 ---
 

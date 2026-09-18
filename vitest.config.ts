@@ -28,6 +28,12 @@ const SAFETY_CRITICAL = [
   'packages/memory/src/build.ts', // the only path to an effective authority
   'packages/graph/src/invariants.ts', // G1-G13 enforcement (SPEC-03 §4)
   'packages/graph/src/traversal.ts', // depth caps and project-scoped walks (G12)
+  'packages/projections/src/apply.ts', // ordering, idempotency, scope (ADR-0013)
+  'packages/projections/src/digest.ts', // the replay/live equivalence proof itself
+  'packages/projections/src/port.ts', // snapshot write rules and restore checks
+  'packages/projections/src/observations.ts', // what a projection did not understand
+  'packages/projections/src/world-model.ts', // SPEC-01 3: the rebuildable world model
+  'packages/projections/src/self-model.ts', // SPEC-01 4: capabilities are evidence-backed
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -41,6 +47,7 @@ export default defineConfig({
       '@genesis/ledger': pkg('ledger'),
       '@genesis/memory': pkg('memory'),
       '@genesis/graph': pkg('graph'),
+      '@genesis/projections': pkg('projections'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/testkit': pkg('testkit'),
     },

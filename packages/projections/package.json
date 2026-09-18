@@ -1,18 +1,16 @@
 {
-  "name": "@genesis/adapters-sqlite",
+  "name": "@genesis/projections",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "SQLite storage adapters for the P1 ports. The only package permitted to import node:sqlite (ADR-0010).",
+  "description": "Projections as pure folds over the event ledger, with replay/live equivalence proven by digest (ADR-0013).",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
     "@genesis/core-types": "workspace:*",
     "@genesis/ledger": "workspace:*",
-    "@genesis/memory": "workspace:*",
-    "@genesis/graph": "workspace:*",
-    "@genesis/projections": "workspace:*"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@genesis/testkit": "workspace:*"

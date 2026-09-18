@@ -30,6 +30,7 @@
       "@genesis/ledger": ["packages/ledger/src/index.ts"],
       "@genesis/memory": ["packages/memory/src/index.ts"],
       "@genesis/graph": ["packages/graph/src/index.ts"],
+      "@genesis/projections": ["packages/projections/src/index.ts"],
       "@genesis/adapters-sqlite": ["packages/adapters-sqlite/src/index.ts"],
       "@genesis/testkit": ["packages/testkit/src/index.ts"]
     }
