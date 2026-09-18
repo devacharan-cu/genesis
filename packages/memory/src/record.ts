@@ -81,6 +81,8 @@ export const CLAMP_REASONS = [
   'MODEL_SOURCED',
   'NO_EVIDENCE',
   'NO_REQUIREMENT_LINK',
+  'NO_HISTORICAL_BOUND',
+  'NO_MODEL_SOURCE',
 ] as const;
 export type ClampReason = (typeof CLAMP_REASONS)[number];
 

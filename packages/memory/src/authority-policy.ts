@@ -1,5 +1,5 @@
 /**
- * Write-time authority policy (SPEC-02 §4.2, ADR-0011).
+ * Write-time authority policy (SPEC-02 §4.2, ADR-0011, ADR-0012).
  *
  * SAFETY-CRITICAL (SPEC-00 §8.1). This is the function that stops an agent from
  * writing `authority: 'HUMAN_DECISION'` and having the store believe it. If it
@@ -16,11 +16,12 @@
 import {
   ACTOR_AUTHORITY_CEILING,
   type ActorKind,
+  AUTHORITY_LEVELS,
   type Authority,
   authorityRank,
+  type MemoryId,
   outranks,
 } from '@genesis/core-types';
-import type { MemoryId } from '@genesis/core-types';
 import type { ClampReason, EntityRef, SourceRef } from './record.js';
 
 export interface AuthorityDecisionInput {
@@ -29,6 +30,12 @@ export interface AuthorityDecisionInput {
   readonly sourceRefs: readonly SourceRef[];
   readonly evidenceRefs: readonly MemoryId[];
   readonly relatedEntities: readonly EntityRef[];
+  /**
+   * When the claim stops being current. Grounds `HISTORICAL`, which means
+   * "previously true, now superseded or aged" — a specific claim, so it needs
+   * a specific fact behind it (ADR-0012).
+   */
+  readonly validUntil?: string | null | undefined;
 }
 
 export interface AuthorityDecision {
@@ -38,18 +45,35 @@ export interface AuthorityDecision {
   readonly clamps: readonly ClampReason[];
 }
 
-/**
- * The floor for a claim that nothing supports.
- *
- * Named `AI_ASSUMPTION` because that is the level the brief defines, though for
- * an ungrounded claim by a human the name does not describe what happened. That
- * mismatch is open decision E11, recorded rather than worked around by
- * inventing a level (ADR-0011).
- */
-const UNGROUNDED_FLOOR: Authority = 'AI_ASSUMPTION';
+const hasModelSource = (input: AuthorityDecisionInput): boolean =>
+  input.sourceRefs.some((ref) => ref.kind === 'MODEL');
 
-/** Authorities that require supporting evidence to be claimed at write time. */
-const REQUIRES_EVIDENCE: readonly Authority[] = ['EVIDENCE', 'VERIFIED_SYSTEM_STATE'];
+/**
+ * What grounds each level — the ladder from ADR-0012.
+ *
+ * Returns `null` when the level is grounded, or the reason it is not.
+ *
+ * `HUMAN_DECISION` returns null unconditionally: the actor requirement is owned
+ * by ceiling 1, which has already run. Re-checking it here would create a
+ * branch that ceiling 1 makes unreachable.
+ *
+ * `UNGROUNDED` returns null unconditionally. That is what makes the step-down
+ * below total — there is always somewhere truthful to land — and in turn what
+ * makes the whole policy monotone.
+ */
+const GROUNDING: Record<Authority, (input: AuthorityDecisionInput) => ClampReason | null> = {
+  HUMAN_DECISION: () => null,
+  VERIFIED_SYSTEM_STATE: (input) => (input.evidenceRefs.length > 0 ? null : 'NO_EVIDENCE'),
+  ACTIVE_REQUIREMENT: (input) =>
+    input.relatedEntities.some((entity) => entity.nodeType === 'REQUIREMENT')
+      ? null
+      : 'NO_REQUIREMENT_LINK',
+  EVIDENCE: (input) => (input.evidenceRefs.length > 0 ? null : 'NO_EVIDENCE'),
+  HISTORICAL: (input) =>
+    input.validUntil !== undefined && input.validUntil !== null ? null : 'NO_HISTORICAL_BOUND',
+  AI_ASSUMPTION: (input) => (hasModelSource(input) ? null : 'NO_MODEL_SOURCE'),
+  UNGROUNDED: () => null,
+};
 
 export function decideAuthority(input: AuthorityDecisionInput): AuthorityDecision {
   const clamps: ClampReason[] = [];
@@ -65,23 +89,34 @@ export function decideAuthority(input: AuthorityDecisionInput): AuthorityDecisio
   // Ceiling 2 — model provenance. This is the one that makes the guarantee
   // absolute: an agent's own claim is model-sourced, so it lands here no matter
   // what it asked for and no matter which actor kind it presents as.
-  const modelSourced = input.sourceRefs.some((ref) => ref.kind === 'MODEL');
-  if (modelSourced && outranks(authority, UNGROUNDED_FLOOR)) {
-    authority = UNGROUNDED_FLOOR;
+  //
+  // Note it caps at AI_ASSUMPTION, not at the floor. AI_ASSUMPTION is grounded
+  // BY that model source, so the ladder below leaves it there.
+  if (hasModelSource(input) && outranks(authority, 'AI_ASSUMPTION')) {
+    authority = 'AI_ASSUMPTION';
     clamps.push('MODEL_SOURCED');
   }
 
-  // Ceiling 3 — grounding. Applied to what survived the ceilings above, so a
-  // claim already reduced to AI_ASSUMPTION is not re-examined.
-  if (REQUIRES_EVIDENCE.includes(authority) && input.evidenceRefs.length === 0) {
-    authority = UNGROUNDED_FLOOR;
-    clamps.push('NO_EVIDENCE');
-  } else if (
-    authority === 'ACTIVE_REQUIREMENT' &&
-    !input.relatedEntities.some((entity) => entity.nodeType === 'REQUIREMENT')
-  ) {
-    authority = UNGROUNDED_FLOOR;
-    clamps.push('NO_REQUIREMENT_LINK');
+  // Ceiling 3 — the grounding ladder. Step down to the highest level at or
+  // below the current one whose grounding is satisfied.
+  //
+  // `L -> max{ L' <= L : grounded(L') }` is monotone non-decreasing in L, and
+  // the two ceilings above are min operations, which are also monotone.
+  // Composing monotone functions gives a monotone policy: over-claiming can
+  // never land a record lower than asking modestly would have (ADR-0012).
+  // Iterating the slice rather than indexing avoids an `undefined` check that
+  // the loop bounds already make impossible — a dead branch in a module that
+  // requires 100% branch coverage is a sign the code is doing more than the
+  // problem needs.
+  for (const level of AUTHORITY_LEVELS.slice(authorityRank(authority) - 1)) {
+    const reason = GROUNDING[level](input);
+    if (reason === null) {
+      authority = level;
+      break;
+    }
+    // Each distinct unmet requirement is recorded once, so the record explains
+    // every rung it fell past rather than only the last.
+    if (!clamps.includes(reason)) clamps.push(reason);
   }
 
   return { authority, clamps };
@@ -90,9 +125,9 @@ export function decideAuthority(input: AuthorityDecisionInput): AuthorityDecisio
 /**
  * The invariant every caller may rely on: the policy never raises authority.
  *
- * Exported so the property tests can state it once and the store can assert it
- * in development. A policy bug that promoted a claim would be the single worst
- * failure in the knowledge layer, so it is checked rather than assumed.
+ * Exported so the property tests can state it once and `buildRecord` can assert
+ * it on every write. A policy bug that promoted a claim would be the single
+ * worst failure in the knowledge layer, so it is checked rather than assumed.
  */
 export function neverPromotes(requested: Authority, decided: Authority): boolean {
   return authorityRank(decided) >= authorityRank(requested);

@@ -201,7 +201,7 @@ export function describeMemoryStoreConformance(harness: MemoryStoreHarness): voi
         expect(record.authorityClamps).toEqual([]);
       });
 
-      it('clamps EVIDENCE with no evidence refs', async () => {
+      it('clamps EVIDENCE with no evidence refs down to the floor', async () => {
         const record = await store.put(
           scope,
           humanRecord({
@@ -210,8 +210,23 @@ export function describeMemoryStoreConformance(harness: MemoryStoreHarness): voi
           }),
           ctx('SYSTEM', 'probe'),
         );
-        expect(record.authority).toBe('AI_ASSUMPTION');
+        // UNGROUNDED, not AI_ASSUMPTION: no model produced this, so calling it
+        // an AI assumption would say something false (ADR-0012).
+        expect(record.authority).toBe('UNGROUNDED');
         expect(record.authorityClamps).toContain('NO_EVIDENCE');
+      });
+
+      it('stops at HISTORICAL when the claim says when it stopped being current', async () => {
+        const record = await store.put(
+          scope,
+          humanRecord({
+            authorityRequested: 'EVIDENCE',
+            sourceRefs: [{ kind: 'TOOL', id: 'runner' }],
+            validUntil: '2020-06-01T00:00:00.000Z',
+          }),
+          ctx('SYSTEM', 'probe'),
+        );
+        expect(record.authority).toBe('HISTORICAL');
       });
 
       it('clamps ACTIVE_REQUIREMENT with no linked requirement', async () => {
@@ -220,7 +235,7 @@ export function describeMemoryStoreConformance(harness: MemoryStoreHarness): voi
           humanRecord({ authorityRequested: 'ACTIVE_REQUIREMENT' }),
           ctx(),
         );
-        expect(record.authority).toBe('AI_ASSUMPTION');
+        expect(record.authority).toBe('UNGROUNDED');
         expect(record.authorityClamps).toContain('NO_REQUIREMENT_LINK');
       });
 
@@ -241,11 +256,24 @@ export function describeMemoryStoreConformance(harness: MemoryStoreHarness): voi
         for (const kind of kinds) {
           const record = await store.put(
             scope,
-            humanRecord({ authorityRequested: 'AI_ASSUMPTION' }),
+            agentRecord({ authorityRequested: 'AI_ASSUMPTION' }),
             ctx(kind, 'x'),
           );
           expect(record.authority, kind).toBe('AI_ASSUMPTION');
         }
+      });
+
+      it('lands an unsupported claim on UNGROUNDED rather than mislabelling it', async () => {
+        // A human asserting something with no evidence, no requirement, no end
+        // date and no model behind it. Naming that an AI assumption would be
+        // false about its provenance (ADR-0012).
+        const record = await store.put(
+          scope,
+          humanRecord({ authorityRequested: 'AI_ASSUMPTION' }),
+          ctx(),
+        );
+        expect(record.authority).toBe('UNGROUNDED');
+        expect(record.authorityClamps).toContain('NO_MODEL_SOURCE');
       });
     });
 

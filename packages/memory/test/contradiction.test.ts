@@ -30,8 +30,8 @@ const PAIRS: { a: Authority; b: Authority }[] = AUTHORITY_LEVELS.flatMap((a) =>
 );
 
 describe('resolveContradiction — exhaustive over every authority pair', () => {
-  it('covers all 36 pairs', () => {
-    expect(PAIRS.length).toBe(36);
+  it('covers every ordered pair of authority levels', () => {
+    expect(PAIRS.length).toBe(AUTHORITY_LEVELS.length ** 2);
   });
 
   it('NEVER produces a change that removes a record', () => {

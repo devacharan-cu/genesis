@@ -155,7 +155,7 @@ Defined in `02-MEMORY-ARCHITECTURE.md`.
 
 ### 4.2 Authority levels
 
-Ordered from highest authority (1) to lowest (6). Authority, not confidence,
+Ordered from highest authority (1) to lowest (7). Authority, not confidence,
 decides which of two conflicting claims governs.
 
 ```canonical:Authority
@@ -165,11 +165,16 @@ ACTIVE_REQUIREMENT
 EVIDENCE
 HISTORICAL
 AI_ASSUMPTION
+UNGROUNDED
 ```
 
 An AI-produced claim enters the store at `AI_ASSUMPTION` and can only be
 promoted by an event that supplies a higher-authority source. It never promotes
 itself.
+
+`UNGROUNDED` is the floor: nothing at all supports the claim. It sits below
+`AI_ASSUMPTION` because an AI assumption *is* grounded — in a model's reasoning,
+which is a real if weak provenance ([ADR-0012](../adr/0012-ungrounded-authority-level.md)).
 
 ### 4.3 Belief states
 
@@ -464,6 +469,7 @@ Full rationale lives in `docs/adr/`. Summary:
 | Ledger integrity | Per-project hash chain over sequenced events | [ADR-0009](../adr/0009-ledger-hash-chain.md) |
 | SQLite driver | Built-in `node:sqlite`, no native build step | [ADR-0010](../adr/0010-node-sqlite-driver.md) |
 | Write-time authority | Clamp to the ceiling, and persist what was clamped | [ADR-0011](../adr/0011-write-time-authority-policy.md) |
+| Authority floor | `UNGROUNDED` below `AI_ASSUMPTION`; grounding is a ladder | [ADR-0012](../adr/0012-ungrounded-authority-level.md) |
 
 ---
 

@@ -61,6 +61,7 @@ export function buildRecord(
     sourceRefs: value.sourceRefs,
     evidenceRefs: value.evidenceRefs,
     relatedEntities: value.relatedEntities,
+    validUntil: value.validUntil,
   });
 
   // The policy must never raise an authority. Asserting it here rather than

@@ -22,9 +22,15 @@ import {
 } from '@genesis/core-types';
 
 describe('authorityRank', () => {
-  it('ranks HUMAN_DECISION highest and AI_ASSUMPTION lowest', () => {
+  it('ranks HUMAN_DECISION highest and UNGROUNDED lowest', () => {
     expect(authorityRank('HUMAN_DECISION')).toBe(1);
-    expect(authorityRank('AI_ASSUMPTION')).toBe(AUTHORITY_LEVELS.length);
+    expect(authorityRank('UNGROUNDED')).toBe(AUTHORITY_LEVELS.length);
+  });
+
+  it('places UNGROUNDED below AI_ASSUMPTION (ADR-0012)', () => {
+    // An AI assumption IS grounded — in a model's reasoning. UNGROUNDED means
+    // nothing supports the claim at all.
+    expect(outranks('AI_ASSUMPTION', 'UNGROUNDED')).toBe(true);
   });
 
   it('assigns a distinct rank to every level', () => {
@@ -44,10 +50,10 @@ describe('compareAuthority and outranks', () => {
     expect(compareAuthority('HUMAN_DECISION', 'AI_ASSUMPTION')).toBeLessThan(0);
   });
 
-  it('an AI assumption does not outrank anything above it', () => {
+  it('the floor does not outrank anything above it', () => {
     for (const level of AUTHORITY_LEVELS) {
-      if (level === 'AI_ASSUMPTION') continue;
-      expect(outranks('AI_ASSUMPTION', level)).toBe(false);
+      if (level === 'UNGROUNDED') continue;
+      expect(outranks('UNGROUNDED', level)).toBe(false);
     }
   });
 

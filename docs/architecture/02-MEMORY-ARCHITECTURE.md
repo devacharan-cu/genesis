@@ -151,6 +151,7 @@ ACTIVE_REQUIREMENT
 EVIDENCE
 HISTORICAL
 AI_ASSUMPTION
+UNGROUNDED
 ```
 
 Rank 1 is highest. Meaning:
@@ -163,6 +164,7 @@ Rank 1 is highest. Meaning:
 | `EVIDENCE` | An observation that has not yet been generalised into requirement or verified state | A test run's output |
 | `HISTORICAL` | Previously true, now superseded or aged | Last release's schema |
 | `AI_ASSUMPTION` | Produced by the reasoning provider without external support | "This service probably uses optimistic locking" |
+| `UNGROUNDED` | Nothing supports it at all — not evidence, not a requirement, not even a model's reasoning | An asserted fact with no provenance that qualifies it for any level above |
 
 ### 4.1 Promotion rules
 
@@ -190,7 +192,23 @@ raise it. The lowest result wins.
 |---|---|---|---|
 | 1 | **Actor** | `HUMAN` → `HUMAN_DECISION`, `SYSTEM` → `VERIFIED_SYSTEM_STATE`, `AGENT` → `EVIDENCE` | `ACTOR_CEILING` |
 | 2 | **Model provenance** | Any `sourceRef` of kind `MODEL` → `AI_ASSUMPTION`, regardless of actor | `MODEL_SOURCED` |
-| 3 | **Grounding** | `EVIDENCE` and `VERIFIED_SYSTEM_STATE` require ≥1 `evidenceRef`; `ACTIVE_REQUIREMENT` requires ≥1 related `REQUIREMENT` entity. Otherwise → `AI_ASSUMPTION` | `NO_EVIDENCE`, `NO_REQUIREMENT_LINK` |
+| 3 | **Grounding ladder** | Each level states what grounds it (below). A claim that fails its level steps down to the highest level at or below it whose grounding *is* satisfied | `NO_EVIDENCE`, `NO_REQUIREMENT_LINK`, `NO_HISTORICAL_BOUND`, `NO_MODEL_SOURCE` |
+
+The grounding ladder ([ADR-0012](../adr/0012-ungrounded-authority-level.md)):
+
+| Level | Grounded by |
+|---|---|
+| `HUMAN_DECISION` | the actor being `HUMAN` — owned by ceiling 1, not re-checked |
+| `VERIFIED_SYSTEM_STATE` | ≥1 evidence reference |
+| `ACTIVE_REQUIREMENT` | ≥1 related `REQUIREMENT` entity |
+| `EVIDENCE` | ≥1 evidence reference |
+| `HISTORICAL` | a `validUntil` — the claim says when it stopped being current |
+| `AI_ASSUMPTION` | a `MODEL` source — the model's reasoning is the grounding |
+| `UNGROUNDED` | nothing; the floor, always satisfied |
+
+Stepping down to the highest *grounded* level rather than to a fixed floor is
+what makes the policy monotone: asking for more can never land a record lower
+than asking modestly would have.
 
 Ceiling 2 is what makes the guarantee absolute: **an agent's own claim is
 model-sourced, so it lands at `AI_ASSUMPTION` and cannot promote itself, no
@@ -211,10 +229,11 @@ disagree with its own caller. A memory record is an interpretation, and the
 honest response to an over-claimed interpretation is to keep it at the level it
 can actually support rather than to discard the content.
 
-**Known wart:** `AI_ASSUMPTION` is also the floor for an *ungrounded* claim by a
-human or the system, where the name does not fit what happened. The authority
-levels are fixed by the project brief, so this is recorded as open decision
-**E11** rather than worked around by inventing a level.
+An earlier version of this policy used `AI_ASSUMPTION` as the floor for every
+ungrounded claim, which named a human's unsupported assertion as an AI
+assumption and made the policy non-monotone. Open decision E11 resolved both by
+adding `UNGROUNDED` and turning the grounding step into the ladder above — see
+[ADR-0012](../adr/0012-ungrounded-authority-level.md).
 
 ### 4.3 Demotion
 

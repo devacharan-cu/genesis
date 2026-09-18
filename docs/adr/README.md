@@ -26,6 +26,7 @@ listed downsides has not been thought through.
 | [0009](0009-ledger-hash-chain.md) | Per-project hash chain over sequenced ledger events | Accepted |
 | [0010](0010-node-sqlite-driver.md) | Built-in `node:sqlite` driver for the P1 adapters | Accepted |
 | [0011](0011-write-time-authority-policy.md) | Write-time authority policy: clamp, and record the clamp | Accepted |
+| [0012](0012-ungrounded-authority-level.md) | Add `UNGROUNDED`, and make the grounding step a ladder | Accepted |
 
 ## Statuses
 

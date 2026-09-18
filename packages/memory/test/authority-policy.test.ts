@@ -1,14 +1,13 @@
 /**
- * Property tests for the write-time authority policy (ADR-0011).
+ * Property tests for the write-time authority policy (ADR-0011, ADR-0012).
  *
- * The policy is a pure function over a SMALL FINITE domain: 6 authority levels
- * × 3 actor kinds × 6 source kinds × {evidence, none} × {requirement, none}.
- * That is enumerable, so these tests enumerate it rather than sampling it —
- * exhaustive checking is strictly stronger than randomised property testing
- * when the domain is this size, and it cannot flake.
+ * The policy is a pure function over a SMALL FINITE domain: 7 authority levels
+ * × 3 actor kinds × 6 source kinds × {evidence, none} × {requirement, none} ×
+ * {validUntil, none}. That is enumerable, so these tests enumerate it rather
+ * than sampling — exhaustive checking is strictly stronger than randomised
+ * property testing at this size, and it cannot flake.
  *
- * The properties are stated over the whole domain. A counterexample anywhere
- * fails the suite and names the exact input.
+ * A counterexample anywhere fails the suite and names the exact input.
  */
 
 import {
@@ -16,6 +15,7 @@ import {
   type ActorKind,
   AUTHORITY_LEVELS,
   authorityRank,
+  outranks,
 } from '@genesis/core-types';
 import {
   type AuthorityDecisionInput,
@@ -29,12 +29,12 @@ import { describe, expect, it } from 'vitest';
 const ACTOR_KINDS: readonly ActorKind[] = ['HUMAN', 'SYSTEM', 'AGENT'];
 const EVIDENCE_ID = 'mem_01ARZ3NDEKTSV4RRFFQ69G5FAV' as never;
 const NODE_ID = 'node_01ARZ3NDEKTSV4RRFFQ69G5FAV' as never;
+const END = '2020-06-01T00:00:00.000Z';
 
 interface Case extends AuthorityDecisionInput {
   readonly label: string;
 }
 
-/** Every combination of the policy's inputs. */
 function everyCase(): Case[] {
   const cases: Case[] = [];
   for (const requested of AUTHORITY_LEVELS) {
@@ -42,16 +42,19 @@ function everyCase(): Case[] {
       for (const sourceKind of SOURCE_KINDS) {
         for (const hasEvidence of [false, true]) {
           for (const hasRequirement of [false, true]) {
-            cases.push({
-              label: `${requested} by ${actorKind} from ${sourceKind}${hasEvidence ? ' +evidence' : ''}${hasRequirement ? ' +requirement' : ''}`,
-              requested,
-              actorKind,
-              sourceRefs: [{ kind: sourceKind, id: 'src' }],
-              evidenceRefs: hasEvidence ? [EVIDENCE_ID] : [],
-              relatedEntities: hasRequirement
-                ? [{ nodeType: 'REQUIREMENT', nodeId: NODE_ID }]
-                : [],
-            });
+            for (const hasEnd of [false, true]) {
+              cases.push({
+                label: `${requested} by ${actorKind} from ${sourceKind}${hasEvidence ? ' +evidence' : ''}${hasRequirement ? ' +requirement' : ''}${hasEnd ? ' +validUntil' : ''}`,
+                requested,
+                actorKind,
+                sourceRefs: [{ kind: sourceKind, id: 'src' }],
+                evidenceRefs: hasEvidence ? [EVIDENCE_ID] : [],
+                relatedEntities: hasRequirement
+                  ? [{ nodeType: 'REQUIREMENT', nodeId: NODE_ID }]
+                  : [],
+                validUntil: hasEnd ? END : null,
+              });
+            }
           }
         }
       }
@@ -64,33 +67,54 @@ const CASES = everyCase();
 
 describe('authority policy — exhaustive properties', () => {
   it('covers the whole input domain', () => {
-    // 6 authorities x 3 actors x 6 sources x 2 x 2
-    expect(CASES.length).toBe(6 * 3 * 6 * 2 * 2);
+    expect(CASES.length).toBe(7 * 3 * 6 * 2 * 2 * 2);
   });
 
   it('NEVER returns an authority higher than requested', () => {
     for (const c of CASES) {
-      const { authority } = decideAuthority(c);
-      expect(neverPromotes(c.requested, authority), c.label).toBe(true);
+      expect(neverPromotes(c.requested, decideAuthority(c).authority), c.label).toBe(true);
     }
   });
 
   it('never exceeds the actor ceiling', () => {
     for (const c of CASES) {
-      const { authority } = decideAuthority(c);
       const ceiling = ACTOR_AUTHORITY_CEILING[c.actorKind];
-      expect(authorityRank(authority), c.label).toBeGreaterThanOrEqual(authorityRank(ceiling));
+      expect(authorityRank(decideAuthority(c).authority), c.label).toBeGreaterThanOrEqual(
+        authorityRank(ceiling),
+      );
     }
   });
 
   it('ALWAYS lands a model-sourced claim at AI_ASSUMPTION', () => {
     // The guarantee: an agent cannot promote its own claims, whatever it asks
     // for, whichever actor it presents as, however much evidence it attaches.
+    // It lands at AI_ASSUMPTION and not lower, because the model source is
+    // exactly what grounds that level (ADR-0012).
     for (const c of CASES) {
-      const modelSourced = c.sourceRefs.some((r) => r.kind === 'MODEL');
-      if (!modelSourced) continue;
-      const { authority } = decideAuthority(c);
-      expect(authority, c.label).toBe('AI_ASSUMPTION');
+      if (!c.sourceRefs.some((r) => r.kind === 'MODEL')) continue;
+      // A caller that asked for UNGROUNDED gets it: the ceiling lowers, it
+      // never raises, so model provenance cannot promote a claim either.
+      const expected = c.requested === 'UNGROUNDED' ? 'UNGROUNDED' : 'AI_ASSUMPTION';
+      expect(decideAuthority(c).authority, c.label).toBe(expected);
+    }
+  });
+
+  /**
+   * The property ADR-0012 was written to restore.
+   *
+   * Asserted across every pair of (case, lower request) in the domain — about
+   * 4000 comparisons — rather than spot-checked.
+   */
+  it('is MONOTONE: asking for less never yields more', () => {
+    for (const c of CASES) {
+      for (const lowerRequest of AUTHORITY_LEVELS) {
+        if (!outranks(c.requested, lowerRequest)) continue;
+        const high = decideAuthority(c).authority;
+        const low = decideAuthority({ ...c, requested: lowerRequest }).authority;
+        expect(authorityRank(low), `${c.label} vs ${lowerRequest}`).toBeGreaterThanOrEqual(
+          authorityRank(high),
+        );
+      }
     }
   });
 
@@ -102,67 +126,48 @@ describe('authority policy — exhaustive properties', () => {
     }
   });
 
-  /**
-   * The policy is NOT monotone, and this test pins the counterexample rather
-   * than asserting a property that does not hold.
-   *
-   * A SYSTEM actor with no evidence asking for HUMAN_DECISION is capped by the
-   * actor ceiling to VERIFIED_SYSTEM_STATE, which then fails its grounding
-   * check and falls to the AI_ASSUMPTION floor. The same actor asking for the
-   * *lower* HISTORICAL — which needs no grounding — keeps it. So over-claiming
-   * lands you below where asking modestly would have.
-   *
-   * This was found by an exhaustive property test asserting monotonicity, which
-   * seemed obviously true when written. Three fixes were considered:
-   *
-   *   - Step down to the highest grounded level instead of the floor. Rejected:
-   *     the next such level is HISTORICAL, which means "previously true, now
-   *     superseded" — a specific claim, not a generic low-confidence bucket.
-   *     Landing there would state something false about the record.
-   *   - Check grounding against the REQUESTED level rather than the effective
-   *     one. Rejected, and it is worse: a SYSTEM probe asking for
-   *     HUMAN_DECISION would land at VERIFIED_SYSTEM_STATE with no evidence,
-   *     which is exactly the claim the grounding rule exists to stop.
-   *   - Add an UNGROUNDED level below HISTORICAL. This is the real fix, and it
-   *     changes an enum the project brief fixed, so it needs a human decision:
-   *     open decision E11 (ADR-0011).
-   *
-   * Until E11 is answered the behaviour stands as documented, so the test
-   * records it. Note that the safety guarantee is unaffected: every clamp here
-   * moves authority DOWN, never up.
-   */
-  it('is NOT monotone, and the known counterexample behaves as documented', () => {
-    const shared = {
-      actorKind: 'SYSTEM' as const,
-      sourceRefs: [{ kind: 'HUMAN' as const, id: 'dev' }],
-      evidenceRefs: [],
-      relatedEntities: [],
-    };
-
-    const overClaimed = decideAuthority({ ...shared, requested: 'HUMAN_DECISION' });
-    const modest = decideAuthority({ ...shared, requested: 'HISTORICAL' });
-
-    expect(overClaimed.authority).toBe('AI_ASSUMPTION');
-    expect(modest.authority).toBe('HISTORICAL');
-    // Asking for more produced strictly less. Recorded, not asserted away.
-    expect(authorityRank(overClaimed.authority)).toBeGreaterThan(authorityRank(modest.authority));
-  });
-
-  it('every clamp moves authority down, never up — across the whole domain', () => {
-    // The weaker property that DOES hold, and the one safety depends on.
+  it('always lands on a level whose grounding is actually satisfied', () => {
     for (const c of CASES) {
       const { authority } = decideAuthority(c);
-      expect(authorityRank(authority), c.label).toBeGreaterThanOrEqual(
-        authorityRank(c.requested),
-      );
+      const hasEvidence = c.evidenceRefs.length > 0;
+      const hasRequirement = c.relatedEntities.some((e) => e.nodeType === 'REQUIREMENT');
+      const hasEnd = c.validUntil !== null && c.validUntil !== undefined;
+      const hasModel = c.sourceRefs.some((r) => r.kind === 'MODEL');
+
+      switch (authority) {
+        case 'VERIFIED_SYSTEM_STATE':
+        case 'EVIDENCE':
+          expect(hasEvidence, c.label).toBe(true);
+          break;
+        case 'ACTIVE_REQUIREMENT':
+          expect(hasRequirement, c.label).toBe(true);
+          break;
+        case 'HISTORICAL':
+          expect(hasEnd, c.label).toBe(true);
+          break;
+        case 'AI_ASSUMPTION':
+          expect(hasModel, c.label).toBe(true);
+          break;
+        case 'HUMAN_DECISION':
+          expect(c.actorKind, c.label).toBe('HUMAN');
+          break;
+        case 'UNGROUNDED':
+          break;
+      }
     }
   });
 
   it('records a clamp exactly when the authority changed', () => {
     for (const c of CASES) {
       const { authority, clamps } = decideAuthority(c);
-      const changed = authority !== c.requested;
-      expect(clamps.length > 0, c.label).toBe(changed);
+      expect(clamps.length > 0, c.label).toBe(authority !== c.requested);
+    }
+  });
+
+  it('never records the same clamp reason twice', () => {
+    for (const c of CASES) {
+      const { clamps } = decideAuthority(c);
+      expect(new Set(clamps).size, c.label).toBe(clamps.length);
     }
   });
 
@@ -172,45 +177,25 @@ describe('authority policy — exhaustive properties', () => {
     }
   });
 
-  it('leaves AI_ASSUMPTION untouched in every configuration', () => {
+  it('leaves UNGROUNDED untouched in every configuration — it is the floor', () => {
     for (const c of CASES) {
-      if (c.requested !== 'AI_ASSUMPTION') continue;
+      if (c.requested !== 'UNGROUNDED') continue;
       const { authority, clamps } = decideAuthority(c);
-      expect(authority, c.label).toBe('AI_ASSUMPTION');
+      expect(authority, c.label).toBe('UNGROUNDED');
       expect(clamps, c.label).toEqual([]);
-    }
-  });
-
-  it('never grants EVIDENCE or above without supporting evidence', () => {
-    for (const c of CASES) {
-      if (c.evidenceRefs.length > 0) continue;
-      const { authority } = decideAuthority(c);
-      const grantsEvidence =
-        authority === 'EVIDENCE' || authority === 'VERIFIED_SYSTEM_STATE';
-      expect(grantsEvidence, c.label).toBe(false);
-    }
-  });
-
-  it('never grants ACTIVE_REQUIREMENT without a linked requirement', () => {
-    for (const c of CASES) {
-      const hasRequirement = c.relatedEntities.some((e) => e.nodeType === 'REQUIREMENT');
-      if (hasRequirement) continue;
-      expect(decideAuthority(c).authority, c.label).not.toBe('ACTIVE_REQUIREMENT');
     }
   });
 
   it('only a HUMAN actor can reach HUMAN_DECISION', () => {
     for (const c of CASES) {
-      const { authority } = decideAuthority(c);
-      if (authority !== 'HUMAN_DECISION') continue;
+      if (decideAuthority(c).authority !== 'HUMAN_DECISION') continue;
       expect(c.actorKind, c.label).toBe('HUMAN');
     }
   });
 
   it('only a HUMAN or SYSTEM actor can reach VERIFIED_SYSTEM_STATE', () => {
     for (const c of CASES) {
-      const { authority } = decideAuthority(c);
-      if (authority !== 'VERIFIED_SYSTEM_STATE') continue;
+      if (decideAuthority(c).authority !== 'VERIFIED_SYSTEM_STATE') continue;
       expect(['HUMAN', 'SYSTEM'], c.label).toContain(c.actorKind);
     }
   });
@@ -223,6 +208,7 @@ describe('authority policy — specific behaviours', () => {
     sourceRefs: [{ kind: 'HUMAN', id: 'dev' }],
     evidenceRefs: [],
     relatedEntities: [],
+    validUntil: null,
     ...over,
   });
 
@@ -266,56 +252,93 @@ describe('authority policy — specific behaviours', () => {
     expect(decision.clamps).toEqual([]);
   });
 
-  it('grants VERIFIED_SYSTEM_STATE to a system actor with evidence', () => {
+  it('falls all the way to UNGROUNDED when nothing grounds the claim', () => {
+    // A human asserting something with no evidence, no requirement link, no
+    // end date and no model source. Previously this was mislabelled
+    // AI_ASSUMPTION, which said something false about where it came from.
     const decision = decideAuthority(
-      base({
-        requested: 'VERIFIED_SYSTEM_STATE',
-        actorKind: 'SYSTEM',
-        sourceRefs: [{ kind: 'TOOL', id: 'probe' }],
-        evidenceRefs: [EVIDENCE_ID],
-      }),
+      base({ requested: 'EVIDENCE', sourceRefs: [{ kind: 'HUMAN', id: 'dev' }] }),
     );
-    expect(decision.authority).toBe('VERIFIED_SYSTEM_STATE');
+    expect(decision.authority).toBe('UNGROUNDED');
+    expect(decision.clamps).toEqual(['NO_EVIDENCE', 'NO_HISTORICAL_BOUND', 'NO_MODEL_SOURCE']);
   });
 
-  it('clamps HISTORICAL for nobody — it needs no grounding', () => {
-    for (const actorKind of ACTOR_KINDS) {
-      const decision = decideAuthority(
-        base({ requested: 'HISTORICAL', actorKind, sourceRefs: [{ kind: 'FILE', id: 'f' }] }),
-      );
-      expect(decision.authority, actorKind).toBe('HISTORICAL');
-    }
-  });
-
-  it('reports NO_EVIDENCE and NO_REQUIREMENT_LINK distinctly', () => {
-    expect(
-      decideAuthority(base({ requested: 'EVIDENCE', actorKind: 'SYSTEM', sourceRefs: [{ kind: 'TOOL', id: 't' }] }))
-        .clamps,
-    ).toContain('NO_EVIDENCE');
-    expect(decideAuthority(base({ requested: 'ACTIVE_REQUIREMENT' })).clamps).toContain(
-      'NO_REQUIREMENT_LINK',
+  it('records every rung it fell past', () => {
+    const decision = decideAuthority(
+      base({ requested: 'VERIFIED_SYSTEM_STATE', actorKind: 'SYSTEM' }),
     );
+    expect(decision.authority).toBe('UNGROUNDED');
+    expect(decision.clamps).toContain('NO_EVIDENCE');
+    expect(decision.clamps).toContain('NO_REQUIREMENT_LINK');
+    expect(decision.clamps).toContain('NO_HISTORICAL_BOUND');
+    expect(decision.clamps).toContain('NO_MODEL_SOURCE');
   });
 
-  it('ignores non-REQUIREMENT related entities when gating ACTIVE_REQUIREMENT', () => {
+  it('stops at HISTORICAL when the claim says when it stopped being current', () => {
+    const decision = decideAuthority(
+      base({ requested: 'EVIDENCE', validUntil: END }),
+    );
+    expect(decision.authority).toBe('HISTORICAL');
+    expect(decision.clamps).toEqual(['NO_EVIDENCE']);
+  });
+
+  it('grants HISTORICAL directly when it is grounded', () => {
+    const decision = decideAuthority(base({ requested: 'HISTORICAL', validUntil: END }));
+    expect(decision.authority).toBe('HISTORICAL');
+    expect(decision.clamps).toEqual([]);
+  });
+
+  it('refuses HISTORICAL with no end date — it asserts something specific', () => {
+    const decision = decideAuthority(base({ requested: 'HISTORICAL' }));
+    expect(decision.authority).toBe('UNGROUNDED');
+    expect(decision.clamps).toContain('NO_HISTORICAL_BOUND');
+  });
+
+  it('refuses AI_ASSUMPTION with no model source', () => {
+    const decision = decideAuthority(base({ requested: 'AI_ASSUMPTION' }));
+    expect(decision.authority).toBe('UNGROUNDED');
+    expect(decision.clamps).toEqual(['NO_MODEL_SOURCE']);
+  });
+
+  it('grants AI_ASSUMPTION when a model produced it', () => {
+    const decision = decideAuthority(
+      base({ requested: 'AI_ASSUMPTION', sourceRefs: [{ kind: 'MODEL', id: 'claude' }] }),
+    );
+    expect(decision.authority).toBe('AI_ASSUMPTION');
+    expect(decision.clamps).toEqual([]);
+  });
+
+  it('ignores non-REQUIREMENT related entities when grounding ACTIVE_REQUIREMENT', () => {
     const decision = decideAuthority(
       base({
         requested: 'ACTIVE_REQUIREMENT',
         relatedEntities: [{ nodeType: 'COMPONENT', nodeId: NODE_ID }],
       }),
     );
-    expect(decision.authority).toBe('AI_ASSUMPTION');
+    expect(decision.authority).toBe('UNGROUNDED');
+  });
+
+  /** The concrete case ADR-0012 was written to fix. */
+  it('the former non-monotonicity counterexample is now monotone', () => {
+    const shared = {
+      actorKind: 'SYSTEM' as const,
+      sourceRefs: [{ kind: 'HUMAN' as const, id: 'dev' }],
+      evidenceRefs: [],
+      relatedEntities: [],
+      validUntil: null,
+    };
+    const overClaimed = decideAuthority({ ...shared, requested: 'HUMAN_DECISION' });
+    const modest = decideAuthority({ ...shared, requested: 'HISTORICAL' });
+
+    expect(overClaimed.authority).toBe('UNGROUNDED');
+    expect(modest.authority).toBe('UNGROUNDED');
+    expect(authorityRank(overClaimed.authority)).toBe(authorityRank(modest.authority));
   });
 });
 
 describe('neverPromotes', () => {
-  it('is true when the decision is equal or lower', () => {
-    expect(neverPromotes('HUMAN_DECISION', 'HUMAN_DECISION')).toBe(true);
-    expect(neverPromotes('HUMAN_DECISION', 'AI_ASSUMPTION')).toBe(true);
-  });
-
   it('is false when the decision is higher — the failure it exists to catch', () => {
-    expect(neverPromotes('AI_ASSUMPTION', 'HUMAN_DECISION')).toBe(false);
+    expect(neverPromotes('UNGROUNDED', 'HUMAN_DECISION')).toBe(false);
   });
 
   it('holds across every ordered pair', () => {

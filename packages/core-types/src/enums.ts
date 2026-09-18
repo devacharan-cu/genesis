@@ -31,6 +31,9 @@ export const AUTHORITY_LEVELS = [
   'EVIDENCE',
   'HISTORICAL',
   'AI_ASSUMPTION',
+  // The floor: nothing supports the claim at all. Below AI_ASSUMPTION because
+  // an AI assumption IS grounded — in a model's reasoning (ADR-0012).
+  'UNGROUNDED',
 ] as const;
 export type Authority = (typeof AUTHORITY_LEVELS)[number];
 
