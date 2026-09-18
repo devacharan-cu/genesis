@@ -1,0 +1,13 @@
+{
+  "name": "@genesis/core-types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical enumerations, branded identifiers and event schemas. Depends on no other workspace package (ADR-0001).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  }
+}

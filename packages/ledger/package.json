@@ -1,0 +1,16 @@
+{
+  "name": "@genesis/ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EventLedger port, append-only semantics, hash chain and schema upcasting.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

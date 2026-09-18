@@ -1,0 +1,17 @@
+{
+  "name": "@genesis/testkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Conformance suites written against the ports. Every adapter for a port must pass the identical suite (ADR-0003).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/ledger": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "2.1.9"
+  }
+}

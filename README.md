@@ -4,10 +4,11 @@ An experimental **self-questioning software intelligence**: an engineering
 system that maintains persistent, structured knowledge about a software project
 and uses it to build, test, repair, verify, deploy and maintain software.
 
-> **Current status: Phase 0 — pre-build architecture. No application code exists
-> yet.** This repository currently contains the specification, the architecture
-> decision records, and the Phase-0 audit. Nothing here is running software, and
-> nothing in this README describes a capability that has been built.
+> **Current status: Phase 1, slice 1 — the core state substrate.** What exists
+> and is tested: the canonical type layer and the event ledger, with two
+> interchangeable adapters. None of the cognitive machinery described below is
+> built yet. The roadmap marks what is done and what is not, and nothing in this
+> README describes a capability that has not been executed.
 
 ---
 
@@ -98,7 +99,7 @@ failing.
 | Phase | Contents | Status |
 |---|---|---|
 | **P0** | Architecture, ADRs, audit | ✅ Complete |
-| **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟡 In progress — slice 1 |
+| **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟡 Slice 1 done (types + ledger); slices 2–4 (memory, graph, projections) remain |
 | **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | ⬜ |
 | **P3** | Inquiry: question engine, scoring, context assembly | ⬜ |
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | ⬜ |
@@ -114,28 +115,49 @@ Full phase definitions and exit criteria:
 
 ## Development
 
-Planned stack: TypeScript (`strict`), pnpm workspace monorepo, Node 22+.
-No package manifests exist yet — they arrive with P1.
-
-Checks that run today:
+TypeScript (`strict`, no `any`), pnpm workspace monorepo, Node 22.5+.
 
 ```bash
-node tools/docs-check.mjs                     # the check
-bash tools/docs-check.negative-test.sh        # proves the check can fail
+corepack pnpm install
+bash tools/verify-all.sh     # every check; nothing is committed unless green
 ```
 
-`docs-check.mjs` validates that every required document exists, that required
-sections are present, that the canonical enumerations are identical everywhere
-they appear, that internal links and heading anchors resolve, that every ADR is
-indexed, and that the required honesty statements are present.
+Individual steps:
 
-`docs-check.negative-test.sh` deliberately breaks the documentation seven
-different ways in a throwaway copy and asserts the checker catches each one —
-because a checker that cannot fail reports green forever and everyone believes
-it.
+```bash
+pnpm test                    # vitest
+pnpm coverage                # + the coverage policy from SPEC-00 §8.1
+pnpm typecheck               # tsc --noEmit, strict
+pnpm lint                    # eslint
+pnpm check:docs              # documentation consistency
+pnpm check:boundaries        # package dependency rules (ADR-0001)
+```
 
-Both check **consistency, not correctness**. Neither can tell you the
-architecture is a good one.
+### Packages
+
+| Package | Contents |
+|---|---|
+| `packages/core-types` | Canonical enums, branded ids, monotonic ULID, project scoping, authority ordering, event schemas. Depends on no other workspace package. |
+| `packages/ledger` | `EventLedger` port, append path, hash chain, verifier, schema upcasting, in-memory adapter |
+| `packages/adapters-sqlite` | SQLite adapter. The only package permitted to import `node:sqlite` |
+| `packages/testkit` | Conformance suites written against the ports |
+
+### On the checkers
+
+Each checker ships with a negative test that deliberately breaks things and
+asserts the checker notices. This is not ceremony — both checkers have already
+been caught passing vacuously, once from a pattern that matched nothing and once
+from a baseline that was already failing. A checker that cannot fail reports
+green forever and everyone believes it.
+
+The same principle runs through the test suite: the two ledger adapters run the
+*same* conformance suite, so "these are interchangeable" is demonstrated rather
+than asserted; and the suite corrupts stored events to prove tampering is
+actually detected, rather than trusting that the append-only code path is the
+only way in.
+
+These check **consistency and behaviour, not correctness of the design**. None
+of them can tell you the architecture is a good one.
 
 ## Development rules
 

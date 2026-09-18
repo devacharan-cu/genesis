@@ -1,0 +1,17 @@
+{
+  "name": "@genesis/adapters-sqlite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SQLite storage adapters for the P1 ports. The only package permitted to import node:sqlite (ADR-0010).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/ledger": "workspace:*"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

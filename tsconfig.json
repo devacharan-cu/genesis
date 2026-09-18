@@ -1,0 +1,36 @@
+{
+  "//": "Typecheck-only configuration. Slice 1 has no runnable app, so nothing is emitted; the emit/project-reference setup lands with apps/cli. See ADR-0002 for why every one of these flags is on.",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@genesis/core-types": ["packages/core-types/src/index.ts"],
+      "@genesis/ledger": ["packages/ledger/src/index.ts"],
+      "@genesis/adapters-sqlite": ["packages/adapters-sqlite/src/index.ts"],
+      "@genesis/testkit": ["packages/testkit/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "vitest.config.ts"]
+}

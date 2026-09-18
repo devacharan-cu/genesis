@@ -67,6 +67,17 @@ Constraints that make this safe to reverse:
 
 - **It is experimental.** The API may change in a Node minor release, and
   `node:sqlite` has fewer users finding its edge cases than `better-sqlite3`.
+- **Observed on day one:** the tooling around it has not caught up. Vite — which
+  Vitest builds on — derives its list of Node builtins from
+  `module.builtinModules`, and `sqlite` is absent from that list precisely
+  *because* it is experimental, even though `module.isBuiltin('node:sqlite')`
+  returns true. Vite therefore strips the `node:` prefix and tries to resolve a
+  package called `sqlite`. Externalising it in the Vitest config does not help,
+  because the prefix is gone before the externals list is consulted. The adapter
+  loads the module through `createRequire` instead, which bypasses the bundler's
+  module graph. This is recorded rather than quietly worked around: it is the
+  first concrete instance of the cost this ADR accepted, and a second or third
+  such workaround would be the signal to revisit the decision.
 - Fewer features: no user-defined function ergonomics or extension loading to
   match the mature driver. FTS5 availability depends on how the bundled SQLite
   was compiled and must be verified before the memory adapter relies on it
