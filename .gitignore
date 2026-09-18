@@ -1,0 +1,81 @@
+# ---------------------------------------------------------------------------
+# GENESIS .gitignore
+# Rule: nothing that is generated, machine-local, or secret belongs in git.
+# ---------------------------------------------------------------------------
+
+# Node / package managers
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# TypeScript / build output
+dist/
+build/
+out/
+*.tsbuildinfo
+.tscache/
+
+# Test / coverage artifacts
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+.vitest/
+
+# Local persistence (Phase-0 SQLite adapter state is machine-local, never shared)
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+.genesis/
+data/local/
+
+# Secrets and credentials — NEVER commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials
+credentials.json
+secrets.json
+.aws/
+.aws-sam/
+
+# AWS / IaC artifacts
+cdk.out/
+cdk.context.json
+.terraform/
+*.tfstate
+*.tfstate.*
+.serverless/
+
+# Sandbox scratch space for generated/untrusted code
+.sandbox/
+workspaces/
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp
+logs/
+*.log
+tmp/
+.tmp/
+.cache/
