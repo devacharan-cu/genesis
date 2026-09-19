@@ -285,6 +285,46 @@ ACHIEVES
 
 Semantics and legal endpoint pairs: `03-GRAPH-ARCHITECTURE.md`.
 
+### 4.9 Cognitive record enumerations
+
+The goal, uncertainty and success-criterion vocabularies from
+[`01-COGNITIVE-ARCHITECTURE.md`](01-COGNITIVE-ARCHITECTURE.md) §5 and §7. They
+are canonical because the rules that govern them — which statuses are terminal,
+which risk is higher — live in code, and a status added in one place only would
+be a status the rules silently do not cover
+([ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md)).
+
+```canonical:GoalStatus
+PROPOSED
+ACTIVE
+BLOCKED
+SATISFIED
+ABANDONED
+```
+
+```canonical:SuccessCheckKind
+TEST
+EVIDENCE
+HUMAN_CONFIRMATION
+```
+
+```canonical:UncertaintyStatus
+OPEN
+IN_PROGRESS
+RESOLVED
+ACCEPTED
+OBSOLETE
+```
+
+`RiskLevel` is ordered lowest first; that order is load-bearing.
+
+```canonical:RiskLevel
+LOW
+MEDIUM
+HIGH
+CRITICAL
+```
+
 ---
 
 ## 5. Canonical project state
@@ -306,7 +346,7 @@ The state comprises these slices:
 | `project` | Core | Record |
 | `worldState` | World Model | Projection |
 | `selfState` | Self Model | Projection |
-| `goals` | Goal System | Tree |
+| `goals` | Goal System | Projection (tree by `parentId`) |
 | `requirements` | Project Tree | Tree + graph nodes |
 | `decisions` | Decision Memory | Append-only records |
 | `entities` | Knowledge Graph | Nodes |
@@ -315,8 +355,9 @@ The state comprises these slices:
 | `dependencies` | Knowledge Graph | `DEPENDS_ON` edges |
 | `tests` | Verification Engine | Records |
 | `issues` | Contradiction / QA | Records |
-| `beliefs` | Belief System | Records |
-| `uncertainties` | Uncertainty Engine | Records |
+| `beliefs` | Belief System | Projection |
+| `uncertainties` | Uncertainty Engine | Projection |
+| `contradictions` | Contradiction Engine | Projection |
 | `questions` | Question Engine | Records |
 | `experiments` | Experiment Engine | Records |
 | `evidence` | Evidence Memory | Immutable records |
@@ -394,6 +435,13 @@ breaks verification at that point and every point after it. Integrity becomes a
 property that can be checked rather than a policy that is trusted. See
 [ADR-0009](../adr/0009-ledger-hash-chain.md).
 
+An append may be **conditional** on the head it expects: `appendMany(scope,
+events, { expectedLastSeq })` lands only if the project is still at that
+sequence, and otherwise writes nothing. A component that decides what to write
+by reading state — the cognitive engine — states the state it read, so a
+decision made on a stale view is refused rather than written on top of someone
+else's ([ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md)).
+
 ---
 
 ## 8. Phasing
@@ -449,6 +497,9 @@ built:
 9. Projection folding, and the digest that proves a replayed state equals the
    live one — a silent failure there makes a rebuilt state that never existed
    look authoritative ([ADR-0013](../adr/0013-projections-as-pure-folds.md))
+10. The cognitive deciders and their fold — goal closure, the belief ladder,
+    uncertainty lifecycle, contradiction determination — and the engine's
+    conditional append ([ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md))
 
 Adding a file to this list is a one-line config change. Removing one requires an
 ADR, because it is a deliberate reduction in what the project guarantees.

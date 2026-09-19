@@ -34,6 +34,13 @@ const SAFETY_CRITICAL = [
   'packages/projections/src/observations.ts', // what a projection did not understand
   'packages/projections/src/world-model.ts', // SPEC-01 3: the rebuildable world model
   'packages/projections/src/self-model.ts', // SPEC-01 4: capabilities are evidence-backed
+  'packages/cognition/src/context.ts', // authority of cognitive events, the fold's payload gate
+  'packages/cognition/src/decide.ts', // command validation and routing (ADR-0014)
+  'packages/cognition/src/goals.ts', // SPEC-01 5: no goal satisfied that is not done
+  'packages/cognition/src/beliefs.ts', // SPEC-01 6: the belief state ladder
+  'packages/cognition/src/uncertainties.ts', // SPEC-01 7: unknowns never silently vanish
+  'packages/cognition/src/contradictions.ts', // SPEC-01 8: both sides kept, no guessed ties
+  'packages/cognition/src/engine.ts', // conditional append and retry (ADR-0014 rule 4)
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -48,6 +55,7 @@ export default defineConfig({
       '@genesis/memory': pkg('memory'),
       '@genesis/graph': pkg('graph'),
       '@genesis/projections': pkg('projections'),
+      '@genesis/cognition': pkg('cognition'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/testkit': pkg('testkit'),
     },

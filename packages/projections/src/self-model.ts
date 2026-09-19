@@ -78,6 +78,11 @@ export const SelfModelState = z
     /** Open uncertainty ids. Sorted, for the same reason. */
     uncertainties: z.array(z.string()),
     currentTask: z.string().nullable(),
+    /**
+     * The goal the system is FOCUSED on — not "which goals are ACTIVE", which
+     * is the goal system's fact (ADR-0014 rule 6). Several goals can be
+     * ACTIVE; the system works on one at a time.
+     */
     currentGoal: z.string().nullable(),
     lastEventAt: z.string().nullable(),
     observations: ObservationLog,
@@ -86,7 +91,13 @@ export const SelfModelState = z
 export type SelfModelState = z.infer<typeof SelfModelState>;
 
 export const SELF_MODEL_PROJECTION = 'selfModel';
-export const SELF_MODEL_VERSION = 1;
+/**
+ * v2 (ADR-0014 rule 6): `assumptions` and `uncertainties` are derived from the
+ * belief system's and uncertainty engine's events instead of a private
+ * vocabulary. Bumped because `apply` changed meaning — v1 snapshots are simply
+ * not found, and the model rebuilds from the ledger.
+ */
+export const SELF_MODEL_VERSION = 2;
 
 const CapabilityPayload = z
   .object({
@@ -107,8 +118,22 @@ const LimitationPayload = z
 
 const TaskPayload = z.object({ taskId: z.string().min(1) }).strict();
 const GoalPayload = z.object({ goalId: z.string().min(1) }).strict();
-const BeliefPayload = z.object({ beliefId: z.string().min(1) }).strict();
-const UncertaintyPayload = z.object({ uncertaintyId: z.string().min(1) }).strict();
+
+// The four schemas below read events OWNED by the cognition package
+// (ADR-0014 rule 6). They are deliberately not `.strict()`: the cognition
+// projection validates these events in full and records any it cannot apply,
+// and this projection needs only the id and the state or status. Re-validating
+// every field here would be a second definition of the same event, and two
+// definitions drift.
+const Id = z.string().min(1);
+const BeliefRecordedView = z.object({ belief: z.object({ id: Id, state: z.string() }) });
+const BeliefStateChangedView = z.object({ beliefId: Id, to: z.string() });
+const UncertaintyRecordedView = z.object({ uncertainty: z.object({ id: Id, status: z.string() }) });
+const UncertaintyStatusChangedView = z.object({ uncertaintyId: Id, to: z.string() });
+
+/** Uncertainty statuses after which it is no longer in play (SPEC-01 §7). */
+const CLOSED_UNCERTAINTY = new Set(['RESOLVED', 'ACCEPTED', 'OBSOLETE']);
+
 const FailurePayload = z
   .object({
     signature: z.string().min(1),
@@ -134,6 +159,13 @@ const malformed = (state: SelfModelState, event: GenesisEvent, error: z.ZodError
 
 const withMember = (list: readonly string[], id: string): string[] =>
   [...new Set([...list, id])].sort();
+
+const withoutMember = (list: readonly string[], id: string): string[] =>
+  list.filter((member) => member !== id);
+
+/** Adds or removes `id` so that its membership is `present`. Idempotent. */
+const setMember = (list: readonly string[], id: string, present: boolean): string[] =>
+  present ? withMember(list, id) : withoutMember(list, id);
 
 function capability(state: SelfModelState, event: GenesisEvent): SelfModelState {
   const parsed = CapabilityPayload.safeParse(event.payload);
@@ -228,7 +260,7 @@ function taskFinished(state: SelfModelState, event: GenesisEvent): SelfModelStat
   return { ...state, currentTask: null };
 }
 
-function goalActivated(state: SelfModelState, event: GenesisEvent): SelfModelState {
+function goalFocused(state: SelfModelState, event: GenesisEvent): SelfModelState {
   const parsed = GoalPayload.safeParse(event.payload);
   if (!parsed.success) return malformed(state, event, parsed.error);
 
@@ -239,13 +271,13 @@ function goalActivated(state: SelfModelState, event: GenesisEvent): SelfModelSta
           state.observations,
           event,
           'STATE_MISMATCH',
-          `goal ${parsed.data.goalId} activated while ${state.currentGoal} was still active`,
+          `goal ${parsed.data.goalId} focused while ${state.currentGoal} was still the focus`,
         );
 
   return { ...state, currentGoal: parsed.data.goalId, observations };
 }
 
-function goalClosed(state: SelfModelState, event: GenesisEvent): SelfModelState {
+function goalUnfocused(state: SelfModelState, event: GenesisEvent): SelfModelState {
   const parsed = GoalPayload.safeParse(event.payload);
   if (!parsed.success) return malformed(state, event, parsed.error);
 
@@ -256,7 +288,7 @@ function goalClosed(state: SelfModelState, event: GenesisEvent): SelfModelState 
         state.observations,
         event,
         'STATE_MISMATCH',
-        `goal ${parsed.data.goalId} closed but the active goal is ${state.currentGoal ?? 'none'}`,
+        `goal ${parsed.data.goalId} unfocused but the focus is ${state.currentGoal ?? 'none'}`,
       ),
     };
   }
@@ -291,54 +323,40 @@ function executionFailed(state: SelfModelState, event: GenesisEvent): SelfModelS
   return { ...state, knownFailures: { ...state.knownFailures, [next.signature]: next } };
 }
 
-function assumptionAdded(state: SelfModelState, event: GenesisEvent): SelfModelState {
-  const parsed = BeliefPayload.safeParse(event.payload);
+// `assumptions` are beliefs currently at ASSUMED (SPEC-01 §4). Membership
+// follows each belief's state, so a belief promoted past ASSUMED, or downgraded
+// to UNKNOWN, leaves the list without a separate "dropped" event to forget.
+
+function beliefRecorded(state: SelfModelState, event: GenesisEvent): SelfModelState {
+  const parsed = BeliefRecordedView.safeParse(event.payload);
   if (!parsed.success) return malformed(state, event, parsed.error);
-  return { ...state, assumptions: withMember(state.assumptions, parsed.data.beliefId) };
+  const { id, state: beliefState } = parsed.data.belief;
+  return { ...state, assumptions: setMember(state.assumptions, id, beliefState === 'ASSUMED') };
 }
 
-function assumptionDropped(state: SelfModelState, event: GenesisEvent): SelfModelState {
-  const parsed = BeliefPayload.safeParse(event.payload);
+function beliefStateChanged(state: SelfModelState, event: GenesisEvent): SelfModelState {
+  const parsed = BeliefStateChangedView.safeParse(event.payload);
   if (!parsed.success) return malformed(state, event, parsed.error);
-
-  if (!state.assumptions.includes(parsed.data.beliefId)) {
-    return {
-      ...state,
-      observations: noteAnomaly(
-        state.observations,
-        event,
-        'UNKNOWN_REFERENCE',
-        `assumption ${parsed.data.beliefId} was not in play`,
-      ),
-    };
-  }
-  return { ...state, assumptions: state.assumptions.filter((id) => id !== parsed.data.beliefId) };
+  const { beliefId, to } = parsed.data;
+  return { ...state, assumptions: setMember(state.assumptions, beliefId, to === 'ASSUMED') };
 }
 
-function uncertaintyOpened(state: SelfModelState, event: GenesisEvent): SelfModelState {
-  const parsed = UncertaintyPayload.safeParse(event.payload);
+// `uncertainties` are the ones still in play: OPEN or IN_PROGRESS.
+
+function uncertaintyRecorded(state: SelfModelState, event: GenesisEvent): SelfModelState {
+  const parsed = UncertaintyRecordedView.safeParse(event.payload);
   if (!parsed.success) return malformed(state, event, parsed.error);
-  return { ...state, uncertainties: withMember(state.uncertainties, parsed.data.uncertaintyId) };
+  const { id, status } = parsed.data.uncertainty;
+  return { ...state, uncertainties: setMember(state.uncertainties, id, !CLOSED_UNCERTAINTY.has(status)) };
 }
 
-function uncertaintyResolved(state: SelfModelState, event: GenesisEvent): SelfModelState {
-  const parsed = UncertaintyPayload.safeParse(event.payload);
+function uncertaintyStatusChanged(state: SelfModelState, event: GenesisEvent): SelfModelState {
+  const parsed = UncertaintyStatusChangedView.safeParse(event.payload);
   if (!parsed.success) return malformed(state, event, parsed.error);
-
-  if (!state.uncertainties.includes(parsed.data.uncertaintyId)) {
-    return {
-      ...state,
-      observations: noteAnomaly(
-        state.observations,
-        event,
-        'UNKNOWN_REFERENCE',
-        `uncertainty ${parsed.data.uncertaintyId} was not open`,
-      ),
-    };
-  }
+  const { uncertaintyId, to } = parsed.data;
   return {
     ...state,
-    uncertainties: state.uncertainties.filter((id) => id !== parsed.data.uncertaintyId),
+    uncertainties: setMember(state.uncertainties, uncertaintyId, !CLOSED_UNCERTAINTY.has(to)),
   };
 }
 
@@ -347,13 +365,13 @@ const HANDLERS: Record<string, (s: SelfModelState, e: GenesisEvent) => SelfModel
   LIMITATION_DECLARED: limitation,
   TASK_STARTED: taskStarted,
   TASK_FINISHED: taskFinished,
-  GOAL_ACTIVATED: goalActivated,
-  GOAL_CLOSED: goalClosed,
+  GOAL_FOCUSED: goalFocused,
+  GOAL_UNFOCUSED: goalUnfocused,
   EXECUTION_FAILED: executionFailed,
-  ASSUMPTION_ADDED: assumptionAdded,
-  ASSUMPTION_DROPPED: assumptionDropped,
-  UNCERTAINTY_OPENED: uncertaintyOpened,
-  UNCERTAINTY_RESOLVED: uncertaintyResolved,
+  BELIEF_RECORDED: beliefRecorded,
+  BELIEF_STATE_CHANGED: beliefStateChanged,
+  UNCERTAINTY_RECORDED: uncertaintyRecorded,
+  UNCERTAINTY_STATUS_CHANGED: uncertaintyStatusChanged,
 };
 
 export const selfModelProjector: Projector<SelfModelState> = {

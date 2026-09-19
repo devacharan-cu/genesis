@@ -28,6 +28,7 @@ listed downsides has not been thought through.
 | [0011](0011-write-time-authority-policy.md) | Write-time authority policy: clamp, and record the clamp | Accepted |
 | [0012](0012-ungrounded-authority-level.md) | Add `UNGROUNDED`, and make the grounding step a ladder | Accepted |
 | [0013](0013-projections-as-pure-folds.md) | Projections are pure folds; snapshots are a droppable cache | Accepted |
+| [0014](0014-cognitive-primitives-as-deciders.md) | Cognitive primitives are deciders over the ledger | Accepted |
 
 ## Statuses
 

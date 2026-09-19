@@ -61,6 +61,9 @@ const ALLOWED_WORKSPACE_DEPS = {
   // Projections fold ledger events. No stores: a projector that could read
   // one would depend on something other than the ledger (ADR-0013 rule 6).
   projections: ['core-types', 'ledger'],
+  // Cognitive primitives are deciders over the ledger (ADR-0014). No stores:
+  // a decider that read a second store would have a second input.
+  cognition: ['core-types', 'ledger', 'projections'],
   'adapters-sqlite': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
   'adapters-aws': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
   reasoning: ['core-types'],
@@ -72,10 +75,11 @@ const ALLOWED_WORKSPACE_DEPS = {
       'memory',
       'graph',
       'projections',
+      'cognition',
       'reasoning',
       'sandbox',
     ],
-  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections'],
+  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections', 'cognition'],
   // Agents get the protocol and the types. No stores, no core, no adapters.
   agents: ['core-types', 'protocol', 'testkit'],
 };

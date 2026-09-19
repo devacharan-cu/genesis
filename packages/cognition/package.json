@@ -1,0 +1,19 @@
+{
+  "name": "@genesis/cognition",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Goal system, belief system, uncertainty engine and contradiction engine as deciders over the event ledger (ADR-0014).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

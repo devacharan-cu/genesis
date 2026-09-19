@@ -65,6 +65,28 @@ export type ChangeLifecycle = (typeof CHANGE_LIFECYCLE)[number];
 export const UNCERTAINTY_RESOLUTIONS = ['ASK_HUMAN', 'SEARCH', 'EXPERIMENT'] as const;
 export type UncertaintyResolution = (typeof UNCERTAINTY_RESOLUTIONS)[number];
 
+/** SPEC-01 §5. `SATISFIED` and `ABANDONED` are terminal. */
+export const GOAL_STATUSES = ['PROPOSED', 'ACTIVE', 'BLOCKED', 'SATISFIED', 'ABANDONED'] as const;
+export type GoalStatus = (typeof GOAL_STATUSES)[number];
+
+/** SPEC-01 §5: how a success criterion is checked. */
+export const SUCCESS_CHECK_KINDS = ['TEST', 'EVIDENCE', 'HUMAN_CONFIRMATION'] as const;
+export type SuccessCheckKind = (typeof SUCCESS_CHECK_KINDS)[number];
+
+/** SPEC-01 §7. `RESOLVED`, `ACCEPTED` and `OBSOLETE` are terminal. */
+export const UNCERTAINTY_STATUSES = [
+  'OPEN',
+  'IN_PROGRESS',
+  'RESOLVED',
+  'ACCEPTED',
+  'OBSOLETE',
+] as const;
+export type UncertaintyStatus = (typeof UNCERTAINTY_STATUSES)[number];
+
+/** SPEC-01 §7. Ordered lowest first. */
+export const RISK_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export type RiskLevel = (typeof RISK_LEVELS)[number];
+
 export const NODE_TYPES = [
   'PROJECT',
   'GOAL',
@@ -140,6 +162,10 @@ export const CANONICAL_ENUMS = {
   VerificationState: VERIFICATION_STATES,
   ChangeLifecycle: CHANGE_LIFECYCLE,
   UncertaintyResolution: UNCERTAINTY_RESOLUTIONS,
+  GoalStatus: GOAL_STATUSES,
+  SuccessCheckKind: SUCCESS_CHECK_KINDS,
+  UncertaintyStatus: UNCERTAINTY_STATUSES,
+  RiskLevel: RISK_LEVELS,
   NodeType: NODE_TYPES,
   EdgeType: EDGE_TYPES,
   CognitiveLoopPhase: COGNITIVE_LOOP_PHASES,

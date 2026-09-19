@@ -19,6 +19,7 @@ import {
   newEventId,
   type EventId,
   type ProjectScope,
+  SequenceConflictError,
   type Sha256Hex,
   ValidationError,
 } from '@genesis/core-types';
@@ -107,6 +108,46 @@ export function buildEvent(
     });
   }
   return validated.data;
+}
+
+/** Options for a conditional append (ADR-0014 rule 4). */
+export interface AppendOptions {
+  /**
+   * The sequence the caller believes is the project's head — 0 for "no events
+   * yet". When the actual head differs, nothing is appended and the append
+   * throws `SequenceConflictError`.
+   *
+   * This is optimistic concurrency. A caller that decided what to write by
+   * reading state at seq N states that assumption here, so a write made on a
+   * stale view fails cleanly instead of landing on top of someone else's.
+   */
+  readonly expectedLastSeq?: number | undefined;
+}
+
+/**
+ * Enforces `expectedLastSeq`. Adapters call it INSIDE the critical section in
+ * which they read the head and write, so the check and the write are atomic —
+ * a check outside it would reopen exactly the race it exists to close.
+ */
+export function assertExpectedHead(
+  scope: ProjectScope,
+  head: LedgerHead | null,
+  options: AppendOptions | undefined,
+): void {
+  const expected = options?.expectedLastSeq;
+  if (expected === undefined) return;
+  if (!Number.isInteger(expected) || expected < 0) {
+    throw new ValidationError('expectedLastSeq must be a non-negative integer', {
+      expectedLastSeq: expected,
+    });
+  }
+  const actual = head?.seq ?? 0;
+  if (actual !== expected) {
+    throw new SequenceConflictError(
+      `project ${scope.projectId} is at seq ${actual}, but the append expected ${expected}`,
+      { projectId: scope.projectId, expectedLastSeq: expected, actualLastSeq: actual },
+    );
+  }
 }
 
 /** Computes the head that results from appending `event`. */

@@ -28,6 +28,10 @@ export const ID_PREFIXES = {
   GoalId: 'goal',
   ProposalId: 'prop',
   AgentId: 'agt',
+  BeliefId: 'bel',
+  UncertaintyId: 'unc',
+  ContradictionId: 'ctr',
+  CriterionId: 'crit',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -59,6 +63,18 @@ export type ProposalId = z.infer<typeof ProposalId>;
 export const AgentId = idSchema(ID_PREFIXES.AgentId).brand<'AgentId'>();
 export type AgentId = z.infer<typeof AgentId>;
 
+export const BeliefId = idSchema(ID_PREFIXES.BeliefId).brand<'BeliefId'>();
+export type BeliefId = z.infer<typeof BeliefId>;
+
+export const UncertaintyId = idSchema(ID_PREFIXES.UncertaintyId).brand<'UncertaintyId'>();
+export type UncertaintyId = z.infer<typeof UncertaintyId>;
+
+export const ContradictionId = idSchema(ID_PREFIXES.ContradictionId).brand<'ContradictionId'>();
+export type ContradictionId = z.infer<typeof ContradictionId>;
+
+export const CriterionId = idSchema(ID_PREFIXES.CriterionId).brand<'CriterionId'>();
+export type CriterionId = z.infer<typeof CriterionId>;
+
 /** Generates a new id of the given kind. */
 function mint(kind: IdKind): string {
   return `${ID_PREFIXES[kind]}_${ulid()}`;
@@ -73,6 +89,11 @@ export const newCycleId = (): CycleId => CycleId.parse(mint('CycleId'));
 export const newGoalId = (): GoalId => GoalId.parse(mint('GoalId'));
 export const newProposalId = (): ProposalId => ProposalId.parse(mint('ProposalId'));
 export const newAgentId = (): AgentId => AgentId.parse(mint('AgentId'));
+export const newBeliefId = (): BeliefId => BeliefId.parse(mint('BeliefId'));
+export const newUncertaintyId = (): UncertaintyId => UncertaintyId.parse(mint('UncertaintyId'));
+export const newContradictionId = (): ContradictionId =>
+  ContradictionId.parse(mint('ContradictionId'));
+export const newCriterionId = (): CriterionId => CriterionId.parse(mint('CriterionId'));
 
 /** A lowercase hex SHA-256 digest. */
 export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/, {

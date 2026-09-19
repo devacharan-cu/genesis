@@ -156,8 +156,15 @@ normalised failure signature so repeats are counted rather than duplicated.
 > What is **not** implemented: the freshness window in rule 1. Deciding that a
 > capability has gone stale needs a clock, and a clock inside the fold would make
 > the projection depend on when it was run — so that belongs to the component
-> reading this state, and is not built yet. Rule 2's state is representable
-> (`hasOpenUncertainty`); the engine that opens those uncertainties is P3.
+> reading this state, and is not built yet.
+>
+> Since P2 (self model v2, [ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md)),
+> `assumptions` and `uncertainties` are read from the belief system's and the
+> uncertainty engine's own events — beliefs at `ASSUMED`, uncertainties `OPEN`
+> or `IN_PROGRESS` — rather than a private vocabulary, so there is one source of
+> truth. `currentGoal` is the goal in *focus* (`GOAL_FOCUSED` /
+> `GOAL_UNFOCUSED`), not which goals are `ACTIVE`. Rule 2's state is
+> representable (`hasOpenUncertainty`).
 
 ---
 
@@ -194,6 +201,17 @@ Drift is detected when:
 Drift emits `GOAL_DRIFT_DETECTED`, ends the cycle with
 `ABORTED_GOAL_DRIFT`, and opens an issue. Drift is a signal, not a crash.
 
+> **Implemented (P2)** in `packages/cognition`
+> ([ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md)): the record
+> above; the tree; the §5.1 rule, read as "at least one criterion that is
+> human-confirmable or names its check"; no `SATISFIED` with an unmet
+> criterion, an `ACTIVE`/`BLOCKED` child, or an open uncertainty blocking it;
+> terminal states that never reopen; no silent cascade on abandon; a
+> human-confirmation criterion met only by a human and a test criterion never
+> on an agent's say-so. Drift conditions 1 and 2 are the pure
+> `checkContribution`. **Not implemented:** condition 3 (needs cycle history),
+> and emitting `GOAL_DRIFT_DETECTED` (needs the loop).
+
 ---
 
 ## 6. Belief system
@@ -228,6 +246,16 @@ Entry requirements — enforced, not advisory:
 A confidence number never substitutes for any of these. A belief at
 `confidence: 0.99, state: ASSUMED` is an assumption, and the planner treats it
 as one.
+
+> **Implemented (P2)**: one step forward at a time, every entry requirement
+> enforced; downgrades to any lower state with a reason. Two rules go beyond
+> the table, both to stop an agent verifying its own claim: an `AGENT` actor
+> can never move a belief to `TESTED` or `VERIFIED`, and test evidence counts
+> toward those states only if a non-agent attached it. An agent's belief is
+> capped at `AI_ASSUMPTION`, with the clamp recorded. Contradicting evidence
+> against a `VERIFIED` belief downgrades it to `TESTED` in the same decision.
+> Evidence is checked by its descriptor; that the evidence exists is the
+> evidence writer's job (SPEC-05 §4, P5).
 
 ---
 
@@ -281,6 +309,16 @@ settle it, not merely when they are inconvenient.
 `ACCEPTED` status exists for uncertainties a human has explicitly decided to
 live with; it records the acceptance rather than pretending the gap closed.
 
+> **Implemented (P2)**: the record (with `blocking` derived from
+> `blocksGoalIds`, so the two cannot disagree), the lifecycle, resolution
+> evidence, `ASK_HUMAN` answered only by a human, `ACCEPTED` only by a human,
+> and `selectResolution` for §7.2. Detection sources 1, 3 and 5 are pure
+> detectors returning drafts — they never write, and never report a gap an open
+> uncertainty already covers; source 4 is the contradiction engine. **Not
+> implemented:** source 2 (needs the graph) and the `UNCERTAINTY` graph node
+> and `BLOCKS` edge (the core orchestrator mirrors records into the graph; it
+> is not built yet).
+
 ---
 
 ## 8. Contradiction engine
@@ -313,6 +351,17 @@ On detection, the engine **always**:
    unless a human explicitly overrides with a recorded `HUMAN_DECISION` event.
 
 Silent overwrite of a conflicting claim is a defect, not an optimisation.
+
+> **Implemented (P2)**: steps 1, 3 and 5. Both sides are always kept, with
+> where each side's authority came from. Authority governs only when it can be
+> trusted — read from a belief in state, or supplied by a `HUMAN` or `SYSTEM`
+> actor; an agent-supplied side authority makes the contradiction
+> *indeterminate*, because otherwise an agent could win by declaring its side
+> more authoritative. Equal or indeterminate opens an `ASK_HUMAN` uncertainty in
+> the same atomic append, and only a human resolves it; resolving settles the
+> uncertainty with it. **Not implemented:** step 2 (the `CONTRADICTS` edge),
+> step 4 (the issue) and step 6 (blocking proposals) — they need the graph and
+> the proposal pipeline.
 
 ---
 

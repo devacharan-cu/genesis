@@ -115,23 +115,25 @@ export async function seedSelfModel(
       },
     },
     {
-      type: 'GOAL_ACTIVATED',
+      type: 'GOAL_FOCUSED',
       actor: HUMAN,
       authority: 'HUMAN_DECISION',
       payload: { goalId: 'goal-ship-p1' },
     },
     { type: 'TASK_STARTED', actor: SYSTEM, authority: 'EVIDENCE', payload: { taskId: 'task-1' } },
+    // Cognition events the self model reads (ADR-0014 rule 6). Only the id
+    // and state/status matter to it; the cognition projection owns the rest.
     {
-      type: 'UNCERTAINTY_OPENED',
+      type: 'UNCERTAINTY_RECORDED',
       actor: SYSTEM,
       authority: 'EVIDENCE',
-      payload: { uncertaintyId: 'unc-1' },
+      payload: { uncertainty: { id: 'unc-1', status: 'OPEN' } },
     },
     {
-      type: 'ASSUMPTION_ADDED',
+      type: 'BELIEF_RECORDED',
       actor: AGENT,
       authority: 'AI_ASSUMPTION',
-      payload: { beliefId: 'bel-1' },
+      payload: { belief: { id: 'bel-1', state: 'ASSUMED' } },
     },
     {
       type: 'EXECUTION_FAILED',

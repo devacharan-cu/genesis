@@ -17,6 +17,8 @@ import {
   type ProjectScope,
   projectScope,
   ScopeMismatchError,
+  SequenceConflictError,
+  ValidationError,
 } from '@genesis/core-types';
 import {
   type EventLedger,
@@ -490,6 +492,71 @@ export function describeLedgerConformance(harness: LedgerHarness): void {
         expect(await ledger.count(other)).toBe(10);
         expect((await ledger.verify(scope)).ok).toBe(true);
         expect((await ledger.verify(other)).ok).toBe(true);
+      });
+    });
+
+    // ------------------------------------------------- conditional append
+
+    describe('conditional append (ADR-0014 rule 4)', () => {
+      it('appends when the head is where the caller expected', async () => {
+        const first = await ledger.appendMany(scope, [humanEvent()], { expectedLastSeq: 0 });
+        expect(first.map((e) => e.seq)).toEqual([1]);
+
+        const next = await ledger.appendMany(scope, [humanEvent(), humanEvent()], {
+          expectedLastSeq: 1,
+        });
+        expect(next.map((e) => e.seq)).toEqual([2, 3]);
+      });
+
+      it('refuses, and writes nothing, when the head has moved', async () => {
+        await ledger.append(scope, humanEvent());
+        await expect(
+          ledger.appendMany(scope, [humanEvent(), humanEvent()], { expectedLastSeq: 0 }),
+        ).rejects.toThrow(SequenceConflictError);
+        expect(await ledger.count(scope)).toBe(1);
+        expect((await ledger.verify(scope)).ok).toBe(true);
+      });
+
+      it('refuses an expectation ahead of the head', async () => {
+        await expect(
+          ledger.appendMany(scope, [humanEvent()], { expectedLastSeq: 5 }),
+        ).rejects.toThrow(/at seq 0, but the append expected 5/);
+        expect(await ledger.count(scope)).toBe(0);
+      });
+
+      it('rejects an expectation that is not a sequence', async () => {
+        for (const bad of [-1, 1.5, Number.NaN]) {
+          await expect(
+            ledger.appendMany(scope, [humanEvent()], { expectedLastSeq: bad }),
+          ).rejects.toThrow(ValidationError);
+        }
+        expect(await ledger.count(scope)).toBe(0);
+      });
+
+      it('lets exactly one of two racing writers with the same expectation win', async () => {
+        const results = await Promise.allSettled([
+          ledger.appendMany(scope, [humanEvent({ payload: { writer: 'a' } })], {
+            expectedLastSeq: 0,
+          }),
+          ledger.appendMany(scope, [humanEvent({ payload: { writer: 'b' } })], {
+            expectedLastSeq: 0,
+          }),
+        ]);
+        expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+        expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+        expect(await ledger.count(scope)).toBe(1);
+      });
+
+      it('checks the expectation per project', async () => {
+        await ledger.append(other, humanEvent());
+        const landed = await ledger.appendMany(scope, [humanEvent()], { expectedLastSeq: 0 });
+        expect(landed[0]?.seq).toBe(1);
+      });
+
+      it('behaves as a plain append when no expectation is given', async () => {
+        await ledger.append(scope, humanEvent());
+        const landed = await ledger.appendMany(scope, [humanEvent()], {});
+        expect(landed[0]?.seq).toBe(2);
       });
     });
 

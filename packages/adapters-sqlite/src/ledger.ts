@@ -49,6 +49,8 @@ import {
 } from '@genesis/core-types';
 import {
   advanceHead,
+  type AppendOptions,
+  assertExpectedHead,
   type BuildEventOptions,
   buildEvent,
   chainDigest,
@@ -248,7 +250,11 @@ export class SqliteEventLedger implements EventLedger, TamperableLedger {
     return event;
   }
 
-  async appendMany(scope: ProjectScope, inputs: readonly unknown[]): Promise<GenesisEvent[]> {
+  async appendMany(
+    scope: ProjectScope,
+    inputs: readonly unknown[],
+    options?: AppendOptions,
+  ): Promise<GenesisEvent[]> {
     this.#assertOpen();
     if (inputs.length === 0) return [];
 
@@ -259,6 +265,9 @@ export class SqliteEventLedger implements EventLedger, TamperableLedger {
     this.#db.exec('BEGIN IMMEDIATE');
     try {
       let head = this.#headSync(scope.projectId);
+      // Under the write lock, so the conditional check and the inserts are one
+      // atomic step; a failed check rolls back through the catch below.
+      assertExpectedHead(scope, head, options);
       const built: GenesisEvent[] = [];
       for (const input of inputs) {
         const event = buildEvent(scope, input, head, this.#options);

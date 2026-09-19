@@ -18,7 +18,14 @@ import {
   type ProjectScope,
   ValidationError,
 } from '@genesis/core-types';
-import { advanceHead, buildEvent, type BuildEventOptions, type LedgerHead } from './append.js';
+import {
+  advanceHead,
+  type AppendOptions,
+  assertExpectedHead,
+  buildEvent,
+  type BuildEventOptions,
+  type LedgerHead,
+} from './append.js';
 import { sha256Hex } from './hash.js';
 import {
   type EventLedger,
@@ -103,13 +110,20 @@ export class InMemoryEventLedger implements EventLedger, TamperableLedger {
     return event;
   }
 
-  async appendMany(scope: ProjectScope, inputs: readonly unknown[]): Promise<GenesisEvent[]> {
+  async appendMany(
+    scope: ProjectScope,
+    inputs: readonly unknown[],
+    options?: AppendOptions,
+  ): Promise<GenesisEvent[]> {
     this.#assertOpen();
     if (inputs.length === 0) return [];
 
     return this.#serialise(scope.projectId, async () => {
       const bucket = this.#bucket(scope.projectId);
       let head: LedgerHead | null = this.#headOf(bucket);
+      // Inside the per-project queue, so no other append can move the head
+      // between this check and the push below.
+      assertExpectedHead(scope, head, options);
       const built: GenesisEvent[] = [];
 
       // Build every event before storing any of them, so a validation failure

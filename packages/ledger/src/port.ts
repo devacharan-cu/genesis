@@ -18,10 +18,10 @@ import {
   type ProjectScope,
   type Sha256Hex,
 } from '@genesis/core-types';
-import { type LedgerHead } from './append.js';
+import { type AppendOptions, type LedgerHead } from './append.js';
 import { type VerificationReport } from './verify.js';
 
-export { type LedgerHead } from './append.js';
+export { type AppendOptions, type LedgerHead } from './append.js';
 
 export interface ReadOptions {
   /** First sequence to return, inclusive. Defaults to 1. */
@@ -71,8 +71,15 @@ export interface EventLedger {
    * Partial application would leave a chain whose hashes are valid but whose
    * meaning is half a transaction, which is harder to diagnose than a clean
    * failure.
+   *
+   * With `options.expectedLastSeq`, the append is also conditional: it lands
+   * only if the project's head is still that sequence (ADR-0014 rule 4).
    */
-  appendMany(scope: ProjectScope, inputs: readonly unknown[]): Promise<GenesisEvent[]>;
+  appendMany(
+    scope: ProjectScope,
+    inputs: readonly unknown[],
+    options?: AppendOptions,
+  ): Promise<GenesisEvent[]>;
 
   /** Fetches by id. Throws ScopeMismatchError if the event belongs elsewhere. */
   get(scope: ProjectScope, id: EventId): Promise<GenesisEvent | null>;

@@ -52,6 +52,25 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/cognition:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@genesis/projections':
+        specifier: workspace:*
+        version: link:../projections
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/core-types:
     dependencies:
       zod:
@@ -112,6 +131,9 @@ importers:
 
   packages/testkit:
     dependencies:
+      '@genesis/cognition':
+        specifier: workspace:*
+        version: link:../cognition
       '@genesis/core-types':
         specifier: workspace:*
         version: link:../core-types

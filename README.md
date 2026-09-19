@@ -4,18 +4,21 @@ An experimental **self-questioning software intelligence**: an engineering
 system that maintains persistent, structured knowledge about a software project
 and uses it to build, test, repair, verify, deploy and maintain software.
 
-> **Current status: Phase 1 complete — the core state substrate.** What exists
-> and is tested: the canonical type layer, the hash-chained event ledger, the
-> memory store with its write-time authority policy, the knowledge graph with
-> invariants G1–G13, and projections that rebuild the world and self models from
-> the ledger and prove the rebuild equals the live state. Each of the four ports
-> has an in-memory and a SQLite adapter running one shared conformance suite.
+> **Current status: Phases 1 and 2 complete — the state substrate and the
+> cognitive primitives.** What exists and is tested: the canonical type layer, the
+> hash-chained event ledger, the memory store with its write-time authority
+> policy, the knowledge graph with invariants G1–G13, projections that rebuild
+> the world and self models from the ledger, and the **goal system, belief system,
+> uncertainty engine and contradiction engine** — all four as deciders over the
+> ledger, so their state is rebuilt from events and proven equal to the live
+> state. Every port has an in-memory and a SQLite adapter running one shared
+> conformance suite.
 >
-> None of the cognitive machinery described below is built yet: there is no
-> loop, no goal system, no question engine, no reasoning provider and no agents.
-> The world and self model projections are folds over events — they record what
-> history says and nothing more. The roadmap marks what is done and what is not,
-> and nothing in this README describes a capability that has not been executed.
+> What is **not** built: the cognitive loop, the question engine, the reasoning
+> provider, experiments, verification and agents. The primitives enforce their
+> rules and record what happened; nothing yet decides *what to do next* with
+> them. The roadmap marks what is done and what is not, and nothing in this
+> README describes a capability that has not been executed.
 
 ---
 
@@ -107,7 +110,7 @@ failing.
 |---|---|---|
 | **P0** | Architecture, ADRs, audit | ✅ Complete |
 | **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟢 Slices 1-4 done: types + hash-chained ledger, MemoryStore + authority policy, GraphStore + invariants G1-G13, projections with replay/live equivalence |
-| **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | ⬜ |
+| **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | 🟢 Done: goal system, belief ladder, uncertainty engine, contradiction engine as deciders over the ledger; conditional append; self model v2 |
 | **P3** | Inquiry: question engine, scoring, context assembly | ⬜ |
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | ⬜ |
 | **P5** | Experiments, sandbox, verification engine | ⬜ |
@@ -149,6 +152,7 @@ pnpm check:boundaries        # package dependency rules (ADR-0001)
 | `packages/memory` | `MemoryStore` port, write-time authority policy and grounding ladder, contradiction preservation, in-memory adapter |
 | `packages/graph` | `GraphStore` port, node/edge schemas, invariants G1–G13, depth-capped traversal and impact analysis, in-memory adapter |
 | `packages/projections` | Projections as pure folds over the ledger, replay/live equivalence by digest, `ProjectionSnapshotStore` port, world and self model projectors |
+| `packages/cognition` | Goal system, belief system, uncertainty engine and contradiction engine: pure deciders, one fold, and an engine that appends conditionally on the head it decided against |
 | `packages/adapters-sqlite` | SQLite adapters for all four ports. The only package permitted to import `node:sqlite` |
 | `packages/testkit` | Conformance suites written against the ports |
 
@@ -166,7 +170,11 @@ rather than asserted; the suite corrupts stored events to prove tampering is
 actually detected, rather than trusting that the append-only code path is the
 only way in; and the projection suite splits each history at every point and
 requires snapshot-plus-tail to equal a full replay, so "rebuildable from the
-ledger" is a test that runs rather than a sentence in a specification.
+ledger" is a test that runs rather than a sentence in a specification. The
+cognitive primitives add seeded random command streams, from every mix of
+actors, with every invariant checked after every accepted command — no goal
+satisfied that is not done, no belief verified by an agent, no contradiction
+decided without trustworthy authority — ending in a replay-equals-live check.
 
 The coverage thresholds get the same treatment. A per-file threshold whose path
 matches nothing passes silently and guarantees nothing, so each one is checked

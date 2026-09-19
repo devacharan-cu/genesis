@@ -16,6 +16,7 @@ export type GenesisErrorCode =
   | 'UNSUPPORTED_SCHEMA_VERSION'
   | 'AUTHORITY_NOT_PERMITTED'
   | 'PROJECTION_DIVERGENCE'
+  | 'COGNITIVE_RULE_VIOLATION'
   | 'NOT_FOUND';
 
 export class GenesisError extends Error {
@@ -101,6 +102,23 @@ export class ProjectionDivergenceError extends GenesisError {
       `projection ${details.projection} for project ${details.projectId} disagrees at seq ${details.lastSeq}: digest ${details.stored} vs ${details.incoming}`,
       details,
     );
+  }
+}
+
+/**
+ * A command a cognitive decider refused (ADR-0014 rule 3).
+ *
+ * Carries a stable `rule` identifier as well as a message, so a caller — and
+ * later the question engine — can branch on WHICH rule was broken ("a goal
+ * needs a success criterion before it can be ACTIVE") without parsing text.
+ * Nothing is appended when this is thrown.
+ */
+export class CognitiveRuleViolationError extends GenesisError {
+  readonly rule: string;
+
+  constructor(rule: string, message: string, details: Readonly<Record<string, unknown>> = {}) {
+    super('COGNITIVE_RULE_VIOLATION', message, { rule, ...details });
+    this.rule = rule;
   }
 }
 

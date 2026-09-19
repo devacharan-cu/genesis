@@ -139,10 +139,10 @@ describe('self model: limitations', () => {
   });
 });
 
-describe('self model: current task and goal', () => {
+describe('self model: current task and goal focus', () => {
   it('follows the ledger', () => {
     const state = fold([
-      ev('GOAL_ACTIVATED', { goalId: 'g1' }),
+      ev('GOAL_FOCUSED', { goalId: 'g1' }),
       ev('TASK_STARTED', { taskId: 't1' }),
     ]);
     expect(state.currentGoal).toBe('g1');
@@ -151,10 +151,10 @@ describe('self model: current task and goal', () => {
 
   it('clears them when they finish', () => {
     const state = fold([
-      ev('GOAL_ACTIVATED', { goalId: 'g1' }),
+      ev('GOAL_FOCUSED', { goalId: 'g1' }),
       ev('TASK_STARTED', { taskId: 't1' }),
       ev('TASK_FINISHED', { taskId: 't1' }),
-      ev('GOAL_CLOSED', { goalId: 'g1' }),
+      ev('GOAL_UNFOCUSED', { goalId: 'g1' }),
     ]);
     expect(state.currentGoal).toBeNull();
     expect(state.currentTask).toBeNull();
@@ -164,8 +164,8 @@ describe('self model: current task and goal', () => {
     const state = fold([
       ev('TASK_STARTED', { taskId: 't1' }),
       ev('TASK_STARTED', { taskId: 't1' }),
-      ev('GOAL_ACTIVATED', { goalId: 'g1' }),
-      ev('GOAL_ACTIVATED', { goalId: 'g1' }),
+      ev('GOAL_FOCUSED', { goalId: 'g1' }),
+      ev('GOAL_FOCUSED', { goalId: 'g1' }),
     ]);
     expect(state.observations.anomalies).toEqual([]);
   });
@@ -174,8 +174,8 @@ describe('self model: current task and goal', () => {
     const state = fold([
       ev('TASK_STARTED', { taskId: 't1' }),
       ev('TASK_STARTED', { taskId: 't2' }),
-      ev('GOAL_ACTIVATED', { goalId: 'g1' }),
-      ev('GOAL_ACTIVATED', { goalId: 'g2' }),
+      ev('GOAL_FOCUSED', { goalId: 'g1' }),
+      ev('GOAL_FOCUSED', { goalId: 'g2' }),
     ]);
 
     expect(state.currentTask).toBe('t2');
@@ -191,22 +191,22 @@ describe('self model: current task and goal', () => {
       ev('TASK_FINISHED', { taskId: 't9' }),
       ev('TASK_STARTED', { taskId: 't1' }),
       ev('TASK_FINISHED', { taskId: 't9' }),
-      ev('GOAL_CLOSED', { goalId: 'g9' }),
+      ev('GOAL_UNFOCUSED', { goalId: 'g9' }),
     ]);
 
     expect(state.currentTask).toBe('t1');
     expect(state.observations.anomalies).toHaveLength(3);
     expect(state.observations.anomalies[0]?.detail).toMatch(/current task is none/);
     expect(state.observations.anomalies[1]?.detail).toMatch(/current task is t1/);
-    expect(state.observations.anomalies[2]?.detail).toMatch(/active goal is none/);
+    expect(state.observations.anomalies[2]?.detail).toMatch(/focus is none/);
   });
 
   it('records malformed task and goal payloads', () => {
     const state = fold([
       ev('TASK_STARTED', { nope: 1 }),
       ev('TASK_FINISHED', { nope: 1 }),
-      ev('GOAL_ACTIVATED', { nope: 1 }),
-      ev('GOAL_CLOSED', { nope: 1 }),
+      ev('GOAL_FOCUSED', { nope: 1 }),
+      ev('GOAL_UNFOCUSED', { nope: 1 }),
     ]);
     expect(state.observations.anomalies.map((a) => a.kind)).toEqual([
       'MALFORMED_PAYLOAD',
@@ -216,13 +216,13 @@ describe('self model: current task and goal', () => {
     ]);
   });
 
-  it('records closing a goal that is not the active one', () => {
+  it('records unfocusing a goal that is not the focus', () => {
     const state = fold([
-      ev('GOAL_ACTIVATED', { goalId: 'g1' }),
-      ev('GOAL_CLOSED', { goalId: 'g2' }),
+      ev('GOAL_FOCUSED', { goalId: 'g1' }),
+      ev('GOAL_UNFOCUSED', { goalId: 'g2' }),
     ]);
     expect(state.currentGoal).toBe('g1');
-    expect(state.observations.anomalies[0]?.detail).toMatch(/active goal is g1/);
+    expect(state.observations.anomalies[0]?.detail).toMatch(/focus is g1/);
   });
 });
 
@@ -259,58 +259,94 @@ describe('self model: known failures', () => {
   });
 });
 
-describe('self model: assumptions and uncertainties', () => {
-  it('keeps both as sorted sets', () => {
-    const state = fold([
-      ev('ASSUMPTION_ADDED', { beliefId: 'bel-2' }),
-      ev('ASSUMPTION_ADDED', { beliefId: 'bel-1' }),
-      ev('ASSUMPTION_ADDED', { beliefId: 'bel-1' }),
-      ev('UNCERTAINTY_OPENED', { uncertaintyId: 'unc-2' }),
-      ev('UNCERTAINTY_OPENED', { uncertaintyId: 'unc-1' }),
-    ]);
+describe('self model: assumptions and uncertainties (from cognition events, v2)', () => {
+  const belief = (id: string, state: string): JsonValue => ({ belief: { id, state } });
+  const moved = (beliefId: string, from: string, to: string): JsonValue => ({ beliefId, from, to });
+  const opened = (id: string, status = 'OPEN'): JsonValue => ({ uncertainty: { id, status } });
+  const status = (uncertaintyId: string, from: string, to: string): JsonValue => ({
+    uncertaintyId,
+    from,
+    to,
+  });
 
+  it('holds beliefs at ASSUMED as a sorted set', () => {
+    const state = fold([
+      ev('BELIEF_RECORDED', belief('bel-2', 'ASSUMED')),
+      ev('BELIEF_RECORDED', belief('bel-1', 'ASSUMED')),
+      ev('BELIEF_RECORDED', belief('bel-3', 'UNKNOWN')),
+    ]);
     expect(state.assumptions).toEqual(['bel-1', 'bel-2']);
-    expect(state.uncertainties).toEqual(['unc-1', 'unc-2']);
   });
 
-  it('removes them when they are dropped or resolved', () => {
-    const state = fold([
-      ev('ASSUMPTION_ADDED', { beliefId: 'bel-1' }),
-      ev('ASSUMPTION_DROPPED', { beliefId: 'bel-1' }),
-      ev('UNCERTAINTY_OPENED', { uncertaintyId: 'unc-1' }),
-      ev('UNCERTAINTY_RESOLVED', { uncertaintyId: 'unc-1' }),
+  it('follows a belief into and out of ASSUMED', () => {
+    const into = fold([
+      ev('BELIEF_RECORDED', belief('bel-1', 'UNKNOWN')),
+      ev('BELIEF_STATE_CHANGED', moved('bel-1', 'UNKNOWN', 'ASSUMED')),
     ]);
+    expect(into.assumptions).toEqual(['bel-1']);
 
-    expect(state.assumptions).toEqual([]);
-    expect(state.uncertainties).toEqual([]);
-    expect(hasOpenUncertainty(state)).toBe(false);
+    const past = fold([
+      ev('BELIEF_RECORDED', belief('bel-1', 'ASSUMED')),
+      ev('BELIEF_STATE_CHANGED', moved('bel-1', 'ASSUMED', 'SUPPORTED')),
+    ]);
+    expect(past.assumptions).toEqual([]);
   });
 
-  it('can say it does not know', () => {
-    // SPEC-01 section 4 rule 2: the "I cannot determine this" state has to be
-    // representable, not merely describable.
-    expect(hasOpenUncertainty(fold([ev('UNCERTAINTY_OPENED', { uncertaintyId: 'u' })]))).toBe(true);
-  });
-
-  it('records dropping something that was never held', () => {
+  it('holds uncertainties that are open or in progress', () => {
     const state = fold([
-      ev('ASSUMPTION_DROPPED', { beliefId: 'bel-9' }),
-      ev('UNCERTAINTY_RESOLVED', { uncertaintyId: 'unc-9' }),
+      ev('UNCERTAINTY_RECORDED', opened('unc-2')),
+      ev('UNCERTAINTY_RECORDED', opened('unc-1')),
+      ev('UNCERTAINTY_STATUS_CHANGED', status('unc-1', 'OPEN', 'IN_PROGRESS')),
+    ]);
+    expect(state.uncertainties).toEqual(['unc-1', 'unc-2']);
+    expect(hasOpenUncertainty(state)).toBe(true);
+  });
+
+  it('drops an uncertainty once it is resolved, accepted or obsolete', () => {
+    for (const closed of ['RESOLVED', 'ACCEPTED', 'OBSOLETE']) {
+      const state = fold([
+        ev('UNCERTAINTY_RECORDED', opened('unc-1')),
+        ev('UNCERTAINTY_STATUS_CHANGED', status('unc-1', 'OPEN', closed)),
+      ]);
+      expect(state.uncertainties, closed).toEqual([]);
+      expect(hasOpenUncertainty(state)).toBe(false);
+    }
+  });
+
+  it('does not add an uncertainty recorded already closed', () => {
+    expect(fold([ev('UNCERTAINTY_RECORDED', opened('unc-1', 'OBSOLETE'))]).uncertainties).toEqual([]);
+  });
+
+  it('reads only the fields it needs, and leaves full validation to the cognition projection', () => {
+    const state = fold([
+      ev('BELIEF_RECORDED', { belief: { id: 'bel-1', state: 'ASSUMED', statement: 'x', extra: 1 } }),
+    ]);
+    expect(state.assumptions).toEqual(['bel-1']);
+    expect(state.observations.anomalies).toEqual([]);
+  });
+
+  it('records a cognition event it cannot read as malformed', () => {
+    const state = fold([
+      ev('BELIEF_RECORDED', { belief: { state: 'ASSUMED' } }),
+      ev('BELIEF_STATE_CHANGED', { beliefId: 'bel-1' }),
+      ev('UNCERTAINTY_RECORDED', { uncertainty: {} }),
+      ev('UNCERTAINTY_STATUS_CHANGED', { to: 'RESOLVED' }),
     ]);
     expect(state.observations.anomalies.map((a) => a.kind)).toEqual([
-      'UNKNOWN_REFERENCE',
-      'UNKNOWN_REFERENCE',
+      'MALFORMED_PAYLOAD',
+      'MALFORMED_PAYLOAD',
+      'MALFORMED_PAYLOAD',
+      'MALFORMED_PAYLOAD',
     ]);
   });
 
-  it('records malformed belief and uncertainty payloads', () => {
+  it('no longer interprets the retired v1 vocabulary', () => {
     const state = fold([
-      ev('ASSUMPTION_ADDED', { nope: 1 }),
-      ev('ASSUMPTION_DROPPED', { nope: 1 }),
-      ev('UNCERTAINTY_OPENED', { nope: 1 }),
-      ev('UNCERTAINTY_RESOLVED', { nope: 1 }),
+      ev('ASSUMPTION_ADDED', { beliefId: 'bel-1' }),
+      ev('UNCERTAINTY_OPENED', { uncertaintyId: 'unc-1' }),
     ]);
-    expect(state.observations.anomalies).toHaveLength(4);
+    expect(state.assumptions).toEqual([]);
+    expect(state.observations.unhandled).toEqual({ ASSUMPTION_ADDED: 1, UNCERTAINTY_OPENED: 1 });
   });
 });
 
