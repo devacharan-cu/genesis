@@ -15,7 +15,10 @@ import {
   AUTHORITY_LEVELS,
   BELIEF_STATES,
   GOAL_STATUSES,
+  HUMAN_RESPONSE_KINDS,
   NODE_TYPES,
+  QUESTION_AUDIENCES,
+  QUESTION_STATUSES,
   RISK_LEVELS,
   SUCCESS_CHECK_KINDS,
   UNCERTAINTY_RESOLUTIONS,
@@ -287,6 +290,96 @@ export const Contradiction = z
   .strict();
 export type Contradiction = z.infer<typeof Contradiction>;
 
+// =================================================================== questions
+
+/** The four factors of SPEC-01 §9.2, each in [0, 1]. */
+export const ScoreFactors = z
+  .object({
+    informationGain: z.number().min(0).max(1),
+    decisionImpact: z.number().min(0).max(1),
+    riskReduction: z.number().min(0).max(1),
+    dependencyCoverage: z.number().min(0).max(1),
+  })
+  .strict();
+export type ScoreFactors = z.infer<typeof ScoreFactors>;
+
+/**
+ * A recorded score: the value, the breakdown it is the product of, and which
+ * scorer produced it (ADR-0017 rule 1). Recorded, never recomputed on read.
+ */
+export const QuestionScore = ScoreFactors.extend({
+  value: z.number().min(0).max(1),
+  scorer: z.object({ name: Text, version: z.number().int().positive() }).strict(),
+}).strict();
+export type QuestionScore = z.infer<typeof QuestionScore>;
+
+/** A response to a question (ADR-0015 rule 2). Immutable once recorded. */
+export const QuestionResponse = z
+  .object({
+    kind: z.enum(HUMAN_RESPONSE_KINDS),
+    text: Text,
+    authority: z.enum(AUTHORITY_LEVELS),
+    respondedBy: RecordedBy,
+    respondedAt: Timestamp,
+    /** Ledger position of the response, so later effects can be told from earlier ones. */
+    respondedSeq: z.number().int().positive(),
+    /** Evidence the responder cited. */
+    evidence: z.array(Id),
+    /** For a contradiction's question: the side the answer says governs. */
+    governingSide: z.union([z.literal(0), z.literal(1)]).nullable(),
+    /** Related beliefs the answer was attached to, for and against. */
+    supportsBeliefIds: z.array(Id),
+    contradictsBeliefIds: z.array(Id),
+    /** REJECT_ASSUMPTION: the beliefs downgraded to UNKNOWN. */
+    rejectedBeliefIds: z.array(Id),
+  })
+  .strict();
+export type QuestionResponse = z.infer<typeof QuestionResponse>;
+
+/** SPEC-01 §9.2: did the answer change anything? Kept so the scorer can be judged. */
+export const QuestionOutcome = z
+  .object({
+    changedPlan: z.boolean(),
+    /** Beliefs that transitioned after the response. Checked against their history. */
+    beliefsTransitioned: z.array(Id),
+    recordedBy: RecordedBy,
+    recordedAt: Timestamp,
+  })
+  .strict();
+export type QuestionOutcome = z.infer<typeof QuestionOutcome>;
+
+/** The question record of SPEC-01 §9.3 and ADR-0015 rule 1. */
+export const Question = z
+  .object({
+    id: Id,
+    text: Text,
+    /** Why it is worth asking. */
+    reason: Text,
+    uncertaintyId: Id,
+    audience: z.enum(QUESTION_AUDIENCES),
+    /** The uncertainty's strategy when the question was drafted. */
+    resolutionMethod: z.enum(UNCERTAINTY_RESOLUTIONS),
+    affectedGoalIds: z.array(Id),
+    affectedRefs: z.array(NodeRef),
+    relatedBeliefIds: z.array(Id),
+    /** Set when the uncertainty belongs to a contradiction. */
+    contradictionId: Id.nullable(),
+    /** Evidence relevant to the question, cited when it was drafted. */
+    evidenceRefs: z.array(Id),
+    /** The latest recorded score: at drafting, then at asking. */
+    score: QuestionScore,
+    status: z.enum(QUESTION_STATUSES),
+    response: QuestionResponse.nullable(),
+    outcome: QuestionOutcome.nullable(),
+    createdBy: RecordedBy,
+    createdAt: Timestamp,
+    askedAt: Timestamp.nullable(),
+    closedAt: Timestamp.nullable(),
+    history: z.array(Transition),
+  })
+  .strict();
+export type Question = z.infer<typeof Question>;
+
 // ======================================================================= state
 
 export const CognitionState = z
@@ -295,6 +388,7 @@ export const CognitionState = z
     beliefs: z.record(Belief),
     uncertainties: z.record(Uncertainty),
     contradictions: z.record(Contradiction),
+    questions: z.record(Question),
     observations: ObservationLog,
   })
   .strict();
@@ -321,6 +415,11 @@ export const COGNITION_EVENTS = {
   UNCERTAINTY_STATUS_CHANGED: 'UNCERTAINTY_STATUS_CHANGED',
   CONTRADICTION_RECORDED: 'CONTRADICTION_RECORDED',
   CONTRADICTION_RESOLVED: 'CONTRADICTION_RESOLVED',
+  QUESTION_DRAFTED: 'QUESTION_DRAFTED',
+  QUESTION_ASKED: 'QUESTION_ASKED',
+  QUESTION_RESPONDED: 'QUESTION_RESPONDED',
+  QUESTION_CLOSED: 'QUESTION_CLOSED',
+  QUESTION_OUTCOME_RECORDED: 'QUESTION_OUTCOME_RECORDED',
 } as const;
 export type CognitionEventType = (typeof COGNITION_EVENTS)[keyof typeof COGNITION_EVENTS];
 
@@ -333,6 +432,9 @@ export const NewBelief = Belief.omit({ history: true }).strict();
 export type NewBelief = z.infer<typeof NewBelief>;
 export const NewUncertainty = Uncertainty.omit({ history: true }).strict();
 export type NewUncertainty = z.infer<typeof NewUncertainty>;
+/** A question as drafted: no response, outcome or history yet. */
+export const NewQuestion = Question.omit({ history: true }).strict();
+export type NewQuestion = z.infer<typeof NewQuestion>;
 
 export const GoalProposedPayload = z.object({ goal: NewGoal }).strict();
 export const GoalCriterionAddedPayload = z
@@ -400,4 +502,31 @@ export const ContradictionResolvedPayload = z
     governingSide: z.union([z.literal(0), z.literal(1)]),
     reason: Text,
   })
+  .strict();
+
+export const QuestionDraftedPayload = z.object({ question: NewQuestion }).strict();
+export const QuestionAskedPayload = z.object({ questionId: Id, score: QuestionScore }).strict();
+export const QuestionRespondedPayload = z
+  .object({
+    questionId: Id,
+    // Who, when, where in the ledger and with what authority are the event's
+    // own fields; the fold reads them from there, so they cannot disagree.
+    response: QuestionResponse.omit({
+      authority: true,
+      respondedBy: true,
+      respondedAt: true,
+      respondedSeq: true,
+    }).strict(),
+  })
+  .strict();
+export const QuestionClosedPayload = z
+  .object({
+    questionId: Id,
+    from: z.enum(QUESTION_STATUSES),
+    to: z.enum(['WITHDRAWN', 'UNANSWERABLE']),
+    reason: Text,
+  })
+  .strict();
+export const QuestionOutcomeRecordedPayload = z
+  .object({ questionId: Id, outcome: QuestionOutcome.omit({ recordedBy: true, recordedAt: true }).strict() })
   .strict();

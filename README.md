@@ -4,21 +4,25 @@ An experimental **self-questioning software intelligence**: an engineering
 system that maintains persistent, structured knowledge about a software project
 and uses it to build, test, repair, verify, deploy and maintain software.
 
-> **Current status: Phases 1 and 2 complete — the state substrate and the
-> cognitive primitives.** What exists and is tested: the canonical type layer, the
-> hash-chained event ledger, the memory store with its write-time authority
+> **Current status: Phases 1–3 complete — the state substrate, the cognitive
+> primitives, and inquiry.** What exists and is tested: the canonical type layer,
+> the hash-chained event ledger, the memory store with its write-time authority
 > policy, the knowledge graph with invariants G1–G13, projections that rebuild
-> the world and self models from the ledger, and the **goal system, belief system,
-> uncertainty engine and contradiction engine** — all four as deciders over the
-> ledger, so their state is rebuilt from events and proven equal to the live
-> state. Every port has an in-memory and a SQLite adapter running one shared
-> conformance suite.
+> the world and self models from the ledger, the **goal system, belief system,
+> uncertainty engine and contradiction engine** as deciders over the ledger, the
+> **question engine** — questions as ledger records, scored by a deterministic,
+> replaceable scorer, answered by a person through `ANSWER`, `REJECT_ASSUMPTION`
+> or `ACCEPT_RISK` with the effects applied in the same append — and **context
+> assembly**: budgeted, explainable, deterministic selection of what a task is
+> shown, with mandatory items that cannot be crowded out. Every port has an
+> in-memory and a SQLite adapter running one shared conformance suite.
 >
-> What is **not** built: the cognitive loop, the question engine, the reasoning
-> provider, experiments, verification and agents. The primitives enforce their
-> rules and record what happened; nothing yet decides *what to do next* with
-> them. The roadmap marks what is done and what is not, and nothing in this
-> README describes a capability that has not been executed.
+> What is **not** built: the cognitive loop and orchestrator, the web question
+> interface and its authentication, the graph mirror of cognitive records, the
+> reasoning provider, experiments, verification and agents. Nothing yet decides
+> *what to do next* on its own, and no person can yet answer a question except
+> through an in-process caller. The roadmap marks what is done and what is not,
+> and nothing in this README describes a capability that has not been executed.
 
 ---
 
@@ -111,7 +115,7 @@ failing.
 | **P0** | Architecture, ADRs, audit | ✅ Complete |
 | **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟢 Slices 1-4 done: types + hash-chained ledger, MemoryStore + authority policy, GraphStore + invariants G1-G13, projections with replay/live equivalence |
 | **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | 🟢 Done: goal system, belief ladder, uncertainty engine, contradiction engine as deciders over the ledger; conditional append; self model v2 |
-| **P3** | Inquiry: question engine, scoring, context assembly | ⬜ |
+| **P3** | Inquiry: question engine, scoring, context assembly | 🟢 Done: questions as ledger records with ANSWER / REJECT_ASSUMPTION / ACCEPT_RISK responses; deterministic, replaceable question scorer; context assembly with mandatory inclusions, split-on-overflow and recorded manifests. The web interface is specified (ADR-0015), not built |
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | ⬜ |
 | **P5** | Experiments, sandbox, verification engine | ⬜ |
 | **P6** | Agents (proposal-based) | ⬜ |
@@ -152,7 +156,8 @@ pnpm check:boundaries        # package dependency rules (ADR-0001)
 | `packages/memory` | `MemoryStore` port, write-time authority policy and grounding ladder, contradiction preservation, in-memory adapter |
 | `packages/graph` | `GraphStore` port, node/edge schemas, invariants G1–G13, depth-capped traversal and impact analysis, in-memory adapter |
 | `packages/projections` | Projections as pure folds over the ledger, replay/live equivalence by digest, `ProjectionSnapshotStore` port, world and self model projectors |
-| `packages/cognition` | Goal system, belief system, uncertainty engine and contradiction engine: pure deciders, one fold, and an engine that appends conditionally on the head it decided against |
+| `packages/cognition` | Goal system, belief system, uncertainty engine, contradiction engine and question engine: pure deciders, one fold, a replaceable question scorer, and an engine that appends conditionally on the head it decided against |
+| `packages/context` | Context assembly: candidate builders, six weighted signals with replaceable relevance and token estimators, budgeted selection with mandatory inclusions, and the `CONTEXT_ASSEMBLED` manifest. Reads stores only through read-only views |
 | `packages/adapters-sqlite` | SQLite adapters for all four ports. The only package permitted to import `node:sqlite` |
 | `packages/testkit` | Conformance suites written against the ports |
 

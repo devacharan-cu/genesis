@@ -39,6 +39,7 @@ export function countingIds(): IdSource {
     belief: next('bel'),
     uncertainty: next('unc'),
     contradiction: next('ctr'),
+    question: next('qst'),
   };
 }
 
@@ -97,12 +98,13 @@ export class Mind {
   }
 
   /** The id of the record the last run created, by kind. */
-  lastId(kind: 'goal' | 'belief' | 'uncertainty' | 'contradiction'): string {
+  lastId(kind: 'goal' | 'belief' | 'uncertainty' | 'contradiction' | 'question'): string {
     const records = {
       goal: this.state.goals,
       belief: this.state.beliefs,
       uncertainty: this.state.uncertainties,
       contradiction: this.state.contradictions,
+      question: this.state.questions,
     }[kind];
     const ids = Object.keys(records).sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]));
     const last = ids.at(-1);

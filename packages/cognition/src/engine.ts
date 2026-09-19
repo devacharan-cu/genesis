@@ -29,6 +29,7 @@ import type { EventLedger } from '@genesis/ledger';
 import { applyEvents, emptyProjection, type ProjectionState, resumeProjection } from '@genesis/projections';
 import { type DecisionContext, defaultIdSource, type IdSource } from './context.js';
 import { decide } from './decide.js';
+import { defaultQuestionScorer, type QuestionScorer } from './scoring.js';
 import { cognitionProjector } from './projector.js';
 import type { CognitionState } from './records.js';
 
@@ -38,6 +39,8 @@ export interface CognitiveEngineOptions {
   readonly now?: () => string;
   /** How many times to decide again after losing a race. Defaults to 3. */
   readonly maxAttempts?: number;
+  /** How questions are scored. Defaults to the deterministic default scorer (ADR-0017). */
+  readonly scorer?: QuestionScorer;
 }
 
 export interface ExecutionResult {
@@ -52,6 +55,7 @@ export class CognitiveEngine {
   readonly #ids: IdSource;
   readonly #now: () => string;
   readonly #maxAttempts: number;
+  readonly #scorer: QuestionScorer;
   readonly #live = new Map<string, ProjectionState<CognitionState>>();
   readonly #queues = new Map<string, Promise<unknown>>();
 
@@ -60,6 +64,7 @@ export class CognitiveEngine {
     this.#ids = options.ids ?? defaultIdSource;
     this.#now = options.now ?? ((): string => new Date().toISOString());
     this.#maxAttempts = options.maxAttempts ?? 3;
+    this.#scorer = options.scorer ?? defaultQuestionScorer;
   }
 
   /** The cognition projection, caught up to the ledger head. */
@@ -87,7 +92,12 @@ export class CognitiveEngine {
     attempt: number,
   ): Promise<ExecutionResult> {
     const current = await this.#catchUp(scope);
-    const ctx: DecisionContext = { actor, now: this.#now(), ids: this.#ids };
+    const ctx: DecisionContext = {
+      actor,
+      now: this.#now(),
+      ids: this.#ids,
+      scorer: this.#scorer,
+    };
     const inputs = decide(current.state, command, ctx);
 
     let appended: GenesisEvent[];

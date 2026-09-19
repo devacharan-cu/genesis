@@ -418,6 +418,43 @@ Questions to humans are batched per cycle, deduplicated against previously
 answered questions, and ordered by score. The system does not ask a question it
 already has a `HUMAN_DECISION`-authority answer for.
 
+### 9.5 Responses and the human interface
+
+A person responds with one of three kinds, each with one defined effect,
+applied in the same atomic append as the response
+([ADR-0015](../adr/0015-questions-as-ledger-records.md)):
+
+| Response | Effect |
+|---|---|
+| `ANSWER` | The uncertainty is `RESOLVED` with the question as resolution evidence; the answer may be attached as evidence for or against related beliefs. A contradiction's question must name the governing side, and resolves the contradiction. |
+| `REJECT_ASSUMPTION` | The named related beliefs go to `UNKNOWN`, with the rejection recorded against each as contradicting evidence; the uncertainty is `RESOLVED`. |
+| `ACCEPT_RISK` | The uncertainty is `ACCEPTED` — the gap stays a gap, by a person's choice. |
+
+The production surface is a web interface over these records, whose actor comes
+from an authenticated session. Terminal prompts are not a production interface.
+
+> **Implemented (P3)** in `packages/cognition`: the §9.3 record, extended by
+> ADR-0015 with the reason, affected goals and nodes, related beliefs, relevant
+> evidence and resolution method; the lifecycle `DRAFT → ASKED → ANSWERED |
+> WITHDRAWN | UNANSWERABLE`, terminal states never reopened; one open question
+> per uncertainty and audience; no draft of a question a human already decided;
+> the three responses above, each composed from the uncertainty, belief and
+> contradiction deciders rather than re-implemented; agents draft but never ask,
+> answer, close or record outcomes; a system answer to a `SELF`/`EXTERNAL`
+> question must cite evidence; the outcome record, whose `beliefsTransitioned`
+> is checked against belief history. Scoring (§9.2) is `QuestionScorer`, with a
+> deterministic default (`genesis.default-question-scorer` v1): informationGain
+> = (1 + movable related beliefs) / (1 + related beliefs); decisionImpact 1 / 0.6
+> / 0.4 / 0.2 for blocking a goal in play / only proposed goals / only graph
+> nodes / nothing; riskReduction = (risk rank + 1) / 4; dependencyCoverage = this
+> uncertainty's share of the best blocked goal's blockers. The value is always the
+> product, computed by the engine; a scorer returning a factor outside [0, 1] is
+> refused. Scores are recorded at drafting and again at asking, with the
+> scorer's name and version. Batching is the pure `nextQuestionBatch`; the
+> interface contract is `pendingHumanQuestions` and `questionView`. **Not
+> implemented:** the web interface and its authentication (SPEC-06), and the
+> `QUESTION` graph node (ADR-0016).
+
 ---
 
 ## 10. Experiment engine
@@ -495,15 +532,39 @@ task's impact set, and known failures whose signature matches the task kind.
 These cannot be crowded out by the budget; if the budget cannot fit them, the
 task is split.
 
+> **Implemented (P3)** in `packages/context`
+> ([ADR-0017](../adr/0017-deterministic-scoring-and-context-assembly.md)):
+> candidate builders for goals, beliefs, open uncertainties, contradictions,
+> answered questions, matching known failures, applicable policies, memory
+> records visible by default and graph nodes in the impact set; the six signals
+> with the default weights above, validated to sum to 1 and summed in a fixed
+> order; relevance through `RelevanceScorer` (default: lexical term coverage)
+> and cost through `TokenEstimator` (default: `ceil(chars / 4)`, an
+> approximation); recency relative to the request's `asOf`, never the clock;
+> the four mandatory inclusions placed first; `SPLIT_REQUIRED` with no context
+> when they alone exceed the budget; greedy selection by score then id; and a
+> manifest of every candidate's signals, score and inclusion, recorded as a
+> `CONTEXT_ASSEMBLED` event input that only the system may record. A read-only
+> gatherer reads the memory and graph ports through `query`, `getNode` and
+> `impactSet` alone. **Not implemented:** embedding relevance (E5), splitting
+> the task (the planner, P4), and deciding which policies apply (P6) — the
+> caller supplies them. Known-failure matching uses a provisional rule (§12
+> item 2).
+
 ---
 
 ## 12. Open design questions
 
 Tracked here rather than silently decided. Each becomes an ADR when settled.
 
-1. Embedding model and store for the lexical/semantic half of retrieval (P3).
-2. Exact normalisation of failure signatures in `knownFailures` (P2).
+1. Embedding model and store for the semantic half of retrieval. P3 ships the
+   lexical half only, behind `RelevanceScorer`; the embedding scorer arrives
+   with E5 (ADR-0017).
+2. Exact normalisation of failure signatures in `knownFailures`. Context
+   assembly matches provisionally — the signature, or its first `:` segment,
+   equals the task kind (ADR-0017).
 3. Whether `informationGain` can be estimated better than the belief-transition
-   proxy (P3, requires the outcome data from §9.2).
+   proxy. P3 records the outcome data (§9.2) this needs; the proxy stays until
+   there is enough of it.
 4. Cycle concurrency: currently one cycle at a time per project; multi-cycle
    needs a locking model (P6).

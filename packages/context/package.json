@@ -1,0 +1,21 @@
+{
+  "name": "@genesis/context",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Context assembly: deterministic, budgeted, explainable selection of what a task is shown (SPEC-01 \u00a711, ADR-0017).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/cognition": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

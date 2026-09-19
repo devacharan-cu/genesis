@@ -41,6 +41,14 @@ const SAFETY_CRITICAL = [
   'packages/cognition/src/uncertainties.ts', // SPEC-01 7: unknowns never silently vanish
   'packages/cognition/src/contradictions.ts', // SPEC-01 8: both sides kept, no guessed ties
   'packages/cognition/src/engine.ts', // conditional append and retry (ADR-0014 rule 4)
+  'packages/cognition/src/questions.ts', // ADR-0015: only a person answers for a person
+  'packages/cognition/src/scoring.ts', // ADR-0017: a recorded score matches its breakdown
+  'packages/context/src/assemble.ts', // SPEC-01 11.3: mandatory context is never crowded out
+  'packages/context/src/candidates.ts', // what is mandatory, and how far each record is from the task
+  'packages/context/src/event.ts', // only the system records what a task was shown
+  'packages/context/src/gather.ts', // reads through read-only views; refuses unknown task nodes
+  'packages/context/src/model.ts', // weights and inputs are checked before they become scores
+  'packages/context/src/scoring.ts', // the six signals, deterministic
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -56,6 +64,7 @@ export default defineConfig({
       '@genesis/graph': pkg('graph'),
       '@genesis/projections': pkg('projections'),
       '@genesis/cognition': pkg('cognition'),
+      '@genesis/context': pkg('context'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/testkit': pkg('testkit'),
     },

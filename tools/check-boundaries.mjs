@@ -64,6 +64,11 @@ const ALLOWED_WORKSPACE_DEPS = {
   // Cognitive primitives are deciders over the ledger (ADR-0014). No stores:
   // a decider that read a second store would have a second input.
   cognition: ['core-types', 'ledger', 'projections'],
+  // Context assembly reads records to choose what a task is shown (ADR-0017).
+  // It may read memory and the graph through narrow read-only views; it may
+  // not depend on the ledger, so it cannot append — the orchestrator records
+  // each assembly.
+  context: ['core-types', 'memory', 'graph', 'projections', 'cognition'],
   'adapters-sqlite': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
   'adapters-aws': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
   reasoning: ['core-types'],
@@ -76,6 +81,7 @@ const ALLOWED_WORKSPACE_DEPS = {
       'graph',
       'projections',
       'cognition',
+      'context',
       'reasoning',
       'sandbox',
     ],

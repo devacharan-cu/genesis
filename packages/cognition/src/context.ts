@@ -18,11 +18,13 @@ import {
   newContradictionId,
   newCriterionId,
   newGoalId,
+  newQuestionId,
   newUncertaintyId,
 } from '@genesis/core-types';
 import { noteAnomaly, type AnomalyKind } from '@genesis/projections';
 import type { z } from 'zod';
 import type { CognitionEventType, CognitionState, RecordedBy, Transition } from './records.js';
+import type { QuestionScorer } from './scoring.js';
 
 /** Where new record ids come from. Injectable so tests are deterministic. */
 export interface IdSource {
@@ -31,6 +33,7 @@ export interface IdSource {
   belief(): string;
   uncertainty(): string;
   contradiction(): string;
+  question(): string;
 }
 
 export const defaultIdSource: IdSource = {
@@ -39,6 +42,7 @@ export const defaultIdSource: IdSource = {
   belief: () => newBeliefId(),
   uncertainty: () => newUncertaintyId(),
   contradiction: () => newContradictionId(),
+  question: () => newQuestionId(),
 };
 
 export interface DecisionContext {
@@ -47,6 +51,11 @@ export interface DecisionContext {
   /** ISO timestamp recorded on the events and on the records they create. */
   readonly now: string;
   readonly ids: IdSource;
+  /**
+   * How questions are scored (ADR-0017 rule 1). Absent means the deterministic
+   * default. Injected, never looked up, so a decision has no hidden input.
+   */
+  readonly scorer?: QuestionScorer;
 }
 
 /** The event inputs a decision produces, ready for `ledger.appendMany`. */

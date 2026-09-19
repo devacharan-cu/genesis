@@ -4,6 +4,8 @@ export * from './goals.js';
 export * from './beliefs.js';
 export * from './uncertainties.js';
 export * from './contradictions.js';
+export * from './scoring.js';
+export * from './questions.js';
 export * from './projector.js';
 export * from './decide.js';
 export * from './engine.js';

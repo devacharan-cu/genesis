@@ -188,6 +188,17 @@ describe('the ladder (SPEC-01 §6.1)', () => {
     expect(mind.state.beliefs[id]?.state).toBe('VERIFIED');
   });
 
+  it('dismisses exactly the evidence named, leaving the rest open', () => {
+    const id = tested();
+    add(id, evidence('first', { kind: 'OBSERVATION' }), 'CONTRADICTING');
+    add(id, evidence('second', { kind: 'OBSERVATION' }), 'CONTRADICTING');
+    mind.run(HUMAN, { kind: 'DISMISS_CONTRADICTING_EVIDENCE', beliefId: id, evidenceId: 'first', reason: 'stale host' });
+    expect(mind.state.beliefs[id]?.contradictingEvidence.map((e) => [e.evidenceId, e.status])).toEqual([
+      ['first', 'DISMISSED'],
+      ['second', 'OPEN'],
+    ]);
+  });
+
   it('downgrades to any lower state with a reason, without overwriting the rationale', () => {
     const id = tested();
     expectRefused(mind, 'REASON_REQUIRED', () => move(id, 'ASSUMED'));

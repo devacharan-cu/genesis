@@ -66,6 +66,7 @@ export function countingIdSource(): IdSource {
     belief: next('bel'),
     uncertainty: next('unc'),
     contradiction: next('ctr'),
+    question: next('qst'),
   };
 }
 
@@ -80,7 +81,7 @@ export function fixedClock(start = Date.UTC(2026, 0, 1)): () => string {
 }
 
 /**
- * A scenario touching all four primitives and most of their rules. Used as the
+ * A scenario touching all five primitives and most of their rules. Used as the
  * seed history for the cognition projector's conformance run, so replay,
  * snapshot-and-tail and determinism are proven over a realistic history.
  */
@@ -130,8 +131,64 @@ export async function seedCognition(engine: CognitiveEngine, scope: ProjectScope
     resolution: 'ASK_HUMAN',
     blocksGoalIds: [goal],
   });
-  await run(HUMAN, { kind: 'RESOLVE_CONTRADICTION', contradictionId: 'ctr-1', governingSide: 0, reason: 'the README is stale' });
-  await run(HUMAN, { kind: 'RESOLVE_UNCERTAINTY', uncertaintyId: 'unc-2', evidence: ['answer:eu-west-1'] });
+
+  // Questions (ADR-0015): both escalations are put to the human and answered
+  // through the question engine, whose responses settle them.
+  await run(SYSTEM, { kind: 'DRAFT_QUESTION', uncertaintyId: 'unc-1', text: 'Is the README or the code right about stores?' });
+  await run(AGENT, { kind: 'DRAFT_QUESTION', uncertaintyId: 'unc-2', text: 'Which AWS region do we deploy to?' });
+  await run(SYSTEM, { kind: 'ASK_QUESTIONS', questionIds: ['qst-1', 'qst-2'] });
+  await run(HUMAN, {
+    kind: 'RESPOND_TO_QUESTION',
+    questionId: 'qst-1',
+    response: { kind: 'ANSWER', text: 'the README is stale', governingSide: 0 },
+  });
+  await run(HUMAN, {
+    kind: 'RESPOND_TO_QUESTION',
+    questionId: 'qst-2',
+    response: { kind: 'ANSWER', text: 'eu-west-1', evidence: ['answer:eu-west-1'] },
+  });
+  await run(SYSTEM, { kind: 'RECORD_QUESTION_OUTCOME', questionId: 'qst-2', changedPlan: true });
+
+  // A refuted assumption goes back to UNKNOWN, with the refutation on record.
+  await run(AGENT, { kind: 'RECORD_BELIEF', statement: 'all users share one timezone', state: 'ASSUMED', rationale: 'one office' });
+  await run(SYSTEM, {
+    kind: 'RECORD_UNCERTAINTY',
+    statement: 'do users span timezones?',
+    whatBreaksIfWrong: 'booking times are shown wrongly',
+    risk: 'MEDIUM',
+    resolution: 'ASK_HUMAN',
+    relatedBeliefs: ['bel-3'],
+  });
+  await run(SYSTEM, { kind: 'DRAFT_QUESTION', uncertaintyId: 'unc-3', text: 'Do users span more than one timezone?' });
+  await run(SYSTEM, { kind: 'ASK_QUESTIONS', questionIds: ['qst-3'] });
+  await run(HUMAN, {
+    kind: 'RESPOND_TO_QUESTION',
+    questionId: 'qst-3',
+    response: { kind: 'REJECT_ASSUMPTION', text: 'users span three timezones', beliefIds: ['bel-3'] },
+  });
+  await run(HUMAN, { kind: 'RECORD_QUESTION_OUTCOME', questionId: 'qst-3', changedPlan: false, beliefsTransitioned: ['bel-3'] });
+
+  // Withdrawn, unanswerable, and a risk a person chose to accept.
+  await run(SYSTEM, {
+    kind: 'RECORD_UNCERTAINTY',
+    statement: 'what is peak load?',
+    whatBreaksIfWrong: 'capacity is undersized',
+    risk: 'LOW',
+    resolution: 'SEARCH',
+  });
+  await run(AGENT, { kind: 'DRAFT_QUESTION', uncertaintyId: 'unc-4', text: 'What does the traffic log say about peak load?' });
+  await run(SYSTEM, { kind: 'WITHDRAW_QUESTION', questionId: 'qst-4', reason: 'no traffic log exists yet' });
+  await run(SYSTEM, { kind: 'DRAFT_QUESTION', uncertaintyId: 'unc-4', text: 'What peak load should we plan for?', audience: 'HUMAN' });
+  await run(SYSTEM, { kind: 'ASK_QUESTIONS', questionIds: ['qst-5'] });
+  await run(HUMAN, { kind: 'MARK_QUESTION_UNANSWERABLE', questionId: 'qst-5', reason: 'nobody knows before launch' });
+  await run(SYSTEM, { kind: 'DRAFT_QUESTION', uncertaintyId: 'unc-4', text: 'Can we launch without a load figure?', audience: 'HUMAN' });
+  await run(SYSTEM, { kind: 'ASK_QUESTIONS', questionIds: ['qst-6'] });
+  await run(HUMAN, {
+    kind: 'RESPOND_TO_QUESTION',
+    questionId: 'qst-6',
+    response: { kind: 'ACCEPT_RISK', text: 'launch small and measure' },
+  });
+
   await run(SYSTEM, { kind: 'MARK_CRITERION_MET', goalId: goal, criterionId: 'crit-1', evidenceRef: 'run-7' });
   await run(HUMAN, { kind: 'SATISFY_GOAL', goalId: goal, reason: 'done' });
 }

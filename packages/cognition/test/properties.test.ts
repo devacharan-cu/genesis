@@ -40,6 +40,8 @@ function generator(random: () => number) {
     const beliefs = Object.values(state.beliefs);
     const uncertainties = Object.values(state.uncertainties);
     const contradictions = Object.values(state.contradictions);
+    const questions = Object.values(state.questions);
+    const question = pick(questions);
     const goal = pick(goals);
     const belief = pick(beliefs);
     const u = pick(uncertainties);
@@ -120,6 +122,25 @@ function generator(random: () => number) {
         governingSide: chance(0.5) ? 0 : 1,
         reason,
       }),
+      () => ({
+        kind: 'DRAFT_QUESTION',
+        uncertaintyId: u?.id ?? 'unc-0',
+        text: pick(['which one?', 'is it safe?', 'what breaks?', 'who decides?'] as const),
+        ...(chance(0.5) ? { audience: pick(['HUMAN', 'SELF', 'EXTERNAL'] as const) } : {}),
+      }),
+      () => ({ kind: 'ASK_QUESTIONS', questionIds: [question?.id ?? 'qst-0'] }),
+      () => ({
+        kind: 'RESPOND_TO_QUESTION',
+        questionId: question?.id ?? 'qst-0',
+        response: pick([
+          { kind: 'ANSWER', text: 'a', ...(chance(0.5) ? { evidence: ['e'] } : {}), ...(chance(0.3) ? { governingSide: 0 } : {}) },
+          { kind: 'REJECT_ASSUMPTION', text: 'no', beliefIds: u?.relatedBeliefs.slice(0, 1) ?? [] },
+          { kind: 'ACCEPT_RISK', text: 'fine' },
+        ]),
+      }),
+      () => ({ kind: 'WITHDRAW_QUESTION', questionId: question?.id ?? 'qst-0', reason }),
+      () => ({ kind: 'MARK_QUESTION_UNANSWERABLE', questionId: question?.id ?? 'qst-0', reason }),
+      () => ({ kind: 'RECORD_QUESTION_OUTCOME', questionId: question?.id ?? 'qst-0', changedPlan: chance(0.5) }),
     ];
     const make = pick(commands) ?? commands[0];
     return { actor, command: make ? make() : {} };
@@ -187,6 +208,28 @@ function assertInvariants(state: CognitionState): void {
       );
     }
     if (u.status === 'ACCEPTED') expect(u.history.at(-1)?.by).toBe(HUMAN.id);
+  }
+
+  const open = new Set<string>();
+  for (const q of Object.values(state.questions)) {
+    const u = state.uncertainties[q.uncertaintyId];
+    expect(u?.relatedQuestions, `${q.id} not linked from its uncertainty`).toContain(q.id);
+    if (u?.resolution === 'ASK_HUMAN') expect(q.audience).toBe('HUMAN');
+    // An agent drafts; it never moves a question.
+    for (const t of q.history) expect(t.by, `agent moved ${q.id} to ${t.to}`).not.toBe(AGENT.id);
+    if (q.status === 'DRAFT' || q.status === 'ASKED') {
+      const key = `${q.uncertaintyId}|${q.audience}`;
+      expect(open.has(key), `two open questions for ${key}`).toBe(false);
+      open.add(key);
+    }
+    if (q.status === 'ANSWERED') {
+      expect(q.response, `${q.id} answered with no response`).not.toBeNull();
+      if (q.audience === 'HUMAN' || q.response?.kind !== 'ANSWER') expect(q.response?.respondedBy.actorKind).toBe('HUMAN');
+      // A response always settles its uncertainty; nothing reopens one.
+      expect(['RESOLVED', 'ACCEPTED']).toContain(u?.status);
+    } else {
+      expect(q.response).toBeNull();
+    }
   }
 }
 

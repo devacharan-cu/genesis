@@ -325,6 +325,31 @@ HIGH
 CRITICAL
 ```
 
+The question vocabularies from §9 of the cognitive architecture and
+[ADR-0015](../adr/0015-questions-as-ledger-records.md). `ANSWERED`, `WITHDRAWN`
+and `UNANSWERABLE` are terminal. Every response is one of three kinds, and each
+kind has exactly one defined effect on the uncertainty it concerns.
+
+```canonical:QuestionStatus
+DRAFT
+ASKED
+ANSWERED
+WITHDRAWN
+UNANSWERABLE
+```
+
+```canonical:QuestionAudience
+HUMAN
+SELF
+EXTERNAL
+```
+
+```canonical:HumanResponseKind
+ANSWER
+REJECT_ASSUMPTION
+ACCEPT_RISK
+```
+
 ---
 
 ## 5. Canonical project state
@@ -358,7 +383,7 @@ The state comprises these slices:
 | `beliefs` | Belief System | Projection |
 | `uncertainties` | Uncertainty Engine | Projection |
 | `contradictions` | Contradiction Engine | Projection |
-| `questions` | Question Engine | Records |
+| `questions` | Question Engine | Projection ([ADR-0015](../adr/0015-questions-as-ledger-records.md)) |
 | `experiments` | Experiment Engine | Records |
 | `evidence` | Evidence Memory | Immutable records |
 | `events` | Event Ledger | Immutable append-only log |
@@ -500,6 +525,12 @@ built:
 10. The cognitive deciders and their fold — goal closure, the belief ladder,
     uncertainty lifecycle, contradiction determination — and the engine's
     conditional append ([ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md))
+11. The question engine and its scoring — who may ask, answer, reject an
+    assumption or accept a risk, and that a recorded score is the product of its
+    recorded factors ([ADR-0015](../adr/0015-questions-as-ledger-records.md))
+12. Context assembly — mandatory inclusions that cannot be crowded out, the
+    split on overflow, and the signals and manifest that explain every choice
+    ([ADR-0017](../adr/0017-deterministic-scoring-and-context-assembly.md))
 
 Adding a file to this list is a one-line config change. Removing one requires an
 ADR, because it is a deliberate reduction in what the project guarantees.
@@ -524,6 +555,11 @@ Full rationale lives in `docs/adr/`. Summary:
 | SQLite driver | Built-in `node:sqlite`, no native build step | [ADR-0010](../adr/0010-node-sqlite-driver.md) |
 | Write-time authority | Clamp to the ceiling, and persist what was clamped | [ADR-0011](../adr/0011-write-time-authority-policy.md) |
 | Authority floor | `UNGROUNDED` below `AI_ASSUMPTION`; grounding is a ladder | [ADR-0012](../adr/0012-ungrounded-authority-level.md) |
+| Projections | Pure folds; snapshots are a droppable cache | [ADR-0013](../adr/0013-projections-as-pure-folds.md) |
+| Cognitive primitives | Deciders over the ledger; conditional append | [ADR-0014](../adr/0014-cognitive-primitives-as-deciders.md) |
+| Human questions | Ledger records; a web interface is the production surface | [ADR-0015](../adr/0015-questions-as-ledger-records.md) |
+| Graph mirroring | Owned by the orchestrator; the graph is never a source of truth | [ADR-0016](../adr/0016-orchestrator-owns-graph-mirroring.md) |
+| Scoring and context | Deterministic, replaceable scorers; context assembly is pure | [ADR-0017](../adr/0017-deterministic-scoring-and-context-assembly.md) |
 
 ---
 

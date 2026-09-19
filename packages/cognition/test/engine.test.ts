@@ -12,6 +12,7 @@ import {
   GoalId,
   newProjectId,
   projectScope,
+  QuestionId,
   UncertaintyId,
 } from '@genesis/core-types';
 import { InMemoryEventLedger } from '@genesis/ledger';
@@ -25,6 +26,7 @@ describe('production defaults', () => {
     expect(BeliefId.safeParse(defaultIdSource.belief()).success).toBe(true);
     expect(UncertaintyId.safeParse(defaultIdSource.uncertainty()).success).toBe(true);
     expect(ContradictionId.safeParse(defaultIdSource.contradiction()).success).toBe(true);
+    expect(QuestionId.safeParse(defaultIdSource.question()).success).toBe(true);
   });
 
   it('runs with no options: branded ids and a real ISO clock', async () => {

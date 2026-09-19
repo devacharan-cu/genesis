@@ -142,6 +142,11 @@ export function beliefAuthority(
     : { authority: clamped, clamp: 'ACTOR_CEILING' };
 }
 
+/** True when evidence with this id is already on the belief, on either side. */
+export const hasEvidence = (belief: Belief, evidenceId: string): boolean =>
+  belief.supportingEvidence.some((e) => e.evidenceId === evidenceId) ||
+  belief.contradictingEvidence.some((e) => e.evidenceId === evidenceId);
+
 /** Evidence the TESTED and VERIFIED rules may count: executed, falsifying, not agent-attached. */
 const isFalsifyingTest = (e: HeldEvidence): boolean =>
   (e.kind === 'TEST' || e.kind === 'EXPERIMENT') && e.couldFalsify && e.addedBy.actorKind !== 'AGENT';
@@ -265,10 +270,7 @@ export function decideBelief(
     case 'ADD_BELIEF_EVIDENCE': {
       const belief = requireBelief(state, command.beliefId);
       const id = command.evidence.evidenceId;
-      const known =
-        belief.supportingEvidence.some((e) => e.evidenceId === id) ||
-        belief.contradictingEvidence.some((e) => e.evidenceId === id);
-      if (known) violation('EVIDENCE_ALREADY_RECORDED', `evidence ${id} is already on belief ${belief.id}`);
+      if (hasEvidence(belief, id)) violation('EVIDENCE_ALREADY_RECORDED', `evidence ${id} is already on belief ${belief.id}`);
 
       const events = [
         cognitiveEvent(ctx, COGNITION_EVENTS.BELIEF_EVIDENCE_ADDED, {
@@ -364,10 +366,7 @@ export const beliefFold: Record<string, (s: CognitionState, e: GenesisEvent) => 
     withPayload(state, event, BeliefEvidenceAddedPayload, ({ beliefId, polarity, evidence }) =>
       withBelief(state, event, beliefId, (belief) => {
         const id = evidence.evidenceId;
-        if (
-          belief.supportingEvidence.some((e) => e.evidenceId === id) ||
-          belief.contradictingEvidence.some((e) => e.evidenceId === id)
-        ) {
+        if (hasEvidence(belief, id)) {
           return anomaly(state, event, 'STATE_MISMATCH', `evidence ${id} already on belief ${belief.id}`);
         }
         const held: HeldEvidence = {

@@ -315,3 +315,26 @@ rather than made silently:
 
 E1, E3–E8 are unchanged and not blocking. **E1** (how long-running experiments
 rejoin the loop) remains the highest-value one to settle before P5.
+
+---
+
+## H. Human decisions received (2026-09-19)
+
+Recorded with authority `HUMAN_DECISION` before P3 began.
+
+| # | Decision | Recorded in |
+|---|---|---|
+| **E8** | **A first-class web interface** for questions and approvals — not the minimal CLI this audit recommended. Questions are structured project records (question, reason, affected goals and nodes, evidence, resolution method, status); a human response is an immutable ledger event that updates the uncertainty or decision it concerns, as one of `ANSWER`, `REJECT_ASSUMPTION` or `ACCEPT_RISK`. Terminal prompts are not a production interface. | [ADR-0015](../adr/0015-questions-as-ledger-records.md); SPEC-00 §4.9 (canonical `QuestionStatus`, `QuestionAudience`, `HumanResponseKind`); SPEC-01 §9.5 |
+| **E12** | **The core orchestrator owns graph mirroring.** Raised during P2 (ADR-0014 left it open). Agents never write cognitive records into the graph; records are committed through the ledger first and then mirrored; the graph stays rebuildable and is never an independent source of truth. | [ADR-0016](../adr/0016-orchestrator-owns-graph-mirroring.md), which also records that the graph and memory stores are not yet ledger-backed, and the migration plan |
+
+P3 needed one further decision, recorded as
+[ADR-0017](../adr/0017-deterministic-scoring-and-context-assembly.md): question
+scoring and context relevance are replaceable, named, versioned components with
+deterministic defaults, and context assembly is a pure package that may read the
+memory and graph stores only through read-only views.
+
+### Status of the remaining open decisions
+
+E1 and E3–E7 remain open. **E5** is now concrete: P3 ships lexical relevance
+only, behind the `RelevanceScorer` interface, and an embedding scorer is the
+change E5 unlocks. **E1** is still the one to settle before P5.

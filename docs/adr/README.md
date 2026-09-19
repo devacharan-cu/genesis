@@ -29,6 +29,9 @@ listed downsides has not been thought through.
 | [0012](0012-ungrounded-authority-level.md) | Add `UNGROUNDED`, and make the grounding step a ladder | Accepted |
 | [0013](0013-projections-as-pure-folds.md) | Projections are pure folds; snapshots are a droppable cache | Accepted |
 | [0014](0014-cognitive-primitives-as-deciders.md) | Cognitive primitives are deciders over the ledger | Accepted |
+| [0015](0015-questions-as-ledger-records.md) | Questions are ledger records; humans answer through a web interface | Accepted |
+| [0016](0016-orchestrator-owns-graph-mirroring.md) | The orchestrator owns graph mirroring; the graph is never a source of truth | Accepted |
+| [0017](0017-deterministic-scoring-and-context-assembly.md) | Deterministic, replaceable scoring; context assembly as a pure package | Accepted |
 
 ## Statuses
 

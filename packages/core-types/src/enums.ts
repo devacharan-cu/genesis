@@ -87,6 +87,21 @@ export type UncertaintyStatus = (typeof UNCERTAINTY_STATUSES)[number];
 export const RISK_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 export type RiskLevel = (typeof RISK_LEVELS)[number];
 
+/**
+ * SPEC-01 §9.3, ADR-0015. `ANSWERED`, `WITHDRAWN` and `UNANSWERABLE` are
+ * terminal: a question is never reopened; a changed mind is a new question.
+ */
+export const QUESTION_STATUSES = ['DRAFT', 'ASKED', 'ANSWERED', 'WITHDRAWN', 'UNANSWERABLE'] as const;
+export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
+
+/** SPEC-01 §9.3: who a question is put to. */
+export const QUESTION_AUDIENCES = ['HUMAN', 'SELF', 'EXTERNAL'] as const;
+export type QuestionAudience = (typeof QUESTION_AUDIENCES)[number];
+
+/** ADR-0015: the three ways a question can be responded to, each with a defined effect. */
+export const HUMAN_RESPONSE_KINDS = ['ANSWER', 'REJECT_ASSUMPTION', 'ACCEPT_RISK'] as const;
+export type HumanResponseKind = (typeof HUMAN_RESPONSE_KINDS)[number];
+
 export const NODE_TYPES = [
   'PROJECT',
   'GOAL',
@@ -166,6 +181,9 @@ export const CANONICAL_ENUMS = {
   SuccessCheckKind: SUCCESS_CHECK_KINDS,
   UncertaintyStatus: UNCERTAINTY_STATUSES,
   RiskLevel: RISK_LEVELS,
+  QuestionStatus: QUESTION_STATUSES,
+  QuestionAudience: QUESTION_AUDIENCES,
+  HumanResponseKind: HUMAN_RESPONSE_KINDS,
   NodeType: NODE_TYPES,
   EdgeType: EDGE_TYPES,
   CognitiveLoopPhase: COGNITIVE_LOOP_PHASES,

@@ -71,6 +71,31 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/context:
+    dependencies:
+      '@genesis/cognition':
+        specifier: workspace:*
+        version: link:../cognition
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/graph':
+        specifier: workspace:*
+        version: link:../graph
+      '@genesis/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@genesis/projections':
+        specifier: workspace:*
+        version: link:../projections
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/core-types:
     dependencies:
       zod:

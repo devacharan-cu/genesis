@@ -16,6 +16,7 @@ import { type CognitiveEventInput, type DecisionContext, violation } from './con
 import { BeliefCommand, decideBelief } from './beliefs.js';
 import { ContradictionCommand, decideContradiction } from './contradictions.js';
 import { decideGoal, GoalCommand } from './goals.js';
+import { decideQuestion, QuestionCommand } from './questions.js';
 import type { CognitionState } from './records.js';
 import { decideUncertainty, UncertaintyCommand } from './uncertainties.js';
 
@@ -24,6 +25,7 @@ export const CognitiveCommand = z.discriminatedUnion('kind', [
   ...BeliefCommand.options,
   ...UncertaintyCommand.options,
   ...ContradictionCommand.options,
+  ...QuestionCommand.options,
 ]);
 export type CognitiveCommand = z.infer<typeof CognitiveCommand>;
 
@@ -33,10 +35,12 @@ const kindsOf = (union: { readonly options: readonly { readonly shape: { kind: z
 const GOAL_KINDS = kindsOf(GoalCommand);
 const BELIEF_KINDS = kindsOf(BeliefCommand);
 const UNCERTAINTY_KINDS = kindsOf(UncertaintyCommand);
+const QUESTION_KINDS = kindsOf(QuestionCommand);
 
 const isGoal = (c: CognitiveCommand): c is GoalCommand => GOAL_KINDS.has(c.kind);
 const isBelief = (c: CognitiveCommand): c is BeliefCommand => BELIEF_KINDS.has(c.kind);
 const isUncertainty = (c: CognitiveCommand): c is UncertaintyCommand => UNCERTAINTY_KINDS.has(c.kind);
+const isQuestion = (c: CognitiveCommand): c is QuestionCommand => QUESTION_KINDS.has(c.kind);
 
 /**
  * Decides a command against a state. Pure: the same state, command and context
@@ -57,5 +61,6 @@ export function decide(
   if (isGoal(valid)) return decideGoal(state, valid, ctx);
   if (isBelief(valid)) return decideBelief(state, valid, ctx);
   if (isUncertainty(valid)) return decideUncertainty(state, valid, ctx);
+  if (isQuestion(valid)) return decideQuestion(state, valid, ctx);
   return decideContradiction(state, valid, ctx);
 }
