@@ -33,6 +33,7 @@ export const ID_PREFIXES = {
   ContradictionId: 'ctr',
   CriterionId: 'crit',
   QuestionId: 'qst',
+  ReasoningCallId: 'rsn',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -79,6 +80,9 @@ export type CriterionId = z.infer<typeof CriterionId>;
 export const QuestionId = idSchema(ID_PREFIXES.QuestionId).brand<'QuestionId'>();
 export type QuestionId = z.infer<typeof QuestionId>;
 
+export const ReasoningCallId = idSchema(ID_PREFIXES.ReasoningCallId).brand<'ReasoningCallId'>();
+export type ReasoningCallId = z.infer<typeof ReasoningCallId>;
+
 /** Generates a new id of the given kind. */
 function mint(kind: IdKind): string {
   return `${ID_PREFIXES[kind]}_${ulid()}`;
@@ -99,6 +103,7 @@ export const newContradictionId = (): ContradictionId =>
   ContradictionId.parse(mint('ContradictionId'));
 export const newCriterionId = (): CriterionId => CriterionId.parse(mint('CriterionId'));
 export const newQuestionId = (): QuestionId => QuestionId.parse(mint('QuestionId'));
+export const newReasoningCallId = (): ReasoningCallId => ReasoningCallId.parse(mint('ReasoningCallId'));
 
 /** A lowercase hex SHA-256 digest. */
 export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/, {

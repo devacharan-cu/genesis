@@ -32,6 +32,7 @@ listed downsides has not been thought through.
 | [0015](0015-questions-as-ledger-records.md) | Questions are ledger records; humans answer through a web interface | Accepted |
 | [0016](0016-orchestrator-owns-graph-mirroring.md) | The orchestrator owns graph mirroring; the graph is never a source of truth | Accepted |
 | [0017](0017-deterministic-scoring-and-context-assembly.md) | Deterministic, replaceable scoring; context assembly as a pure package | Accepted |
+| [0018](0018-reasoning-and-orchestration.md) | The reasoning port, the Bedrock adapter, and the core orchestrator | Accepted (amends 0007 rule 1) |
 
 ## Statuses
 

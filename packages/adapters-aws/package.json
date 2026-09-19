@@ -1,0 +1,18 @@
+{
+  "name": "@genesis/adapters-aws",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AWS adapters. P4: the Bedrock ReasoningProvider (ADR-0018). The only package permitted to import the AWS SDK.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1136.0",
+    "@genesis/core-types": "workspace:*",
+    "@genesis/reasoning": "workspace:*"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

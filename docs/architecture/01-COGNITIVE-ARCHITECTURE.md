@@ -79,6 +79,30 @@ resolution `ASK_HUMAN` and is marked blocking for the active goal, the cycle
 ends with outcome `BLOCKED_ON_HUMAN`. The system does not guess and proceed. It
 records what it cannot determine, and why that matters, as a first-class state.
 
+### 2.3 The orchestrated run (P4)
+
+> **Implemented (P4)** in `packages/core`
+> ([ADR-0018](../adr/0018-reasoning-and-orchestration.md)): not the full cycle
+> above, but its reasoning spine — one **run** of one task, under a `cycleId`
+> stamped on every event it causes: `TASK_STARTED` → context gathered and
+> assembled against the cognitive state at a recorded ledger position
+> (`CONTEXT_ASSEMBLED`) → `TASK_SPLIT_REQUIRED` and stop, before any model
+> call, when mandatory context cannot fit → `REASONING_REQUESTED` → the provider
+> call under a budget and an outer timeout → `REASONING_FAILED` (typed) or
+> `REASONING_RESPONDED` (the exact text, recorded before anything reads it) →
+> `REASONING_OUTPUT_REJECTED` if it is not the proposal envelope → one
+> `PROPOSAL_EVALUATED` per proposal → the graph mirror reconciled from the
+> committed state → `TASK_FINISHED`. A proposal is one of `RECORD_BELIEF`,
+> `RECORD_UNCERTAINTY`, `DRAFT_QUESTION` or `RECORD_CONTRADICTION`, must name an
+> `ACTIVE` goal it serves, and is executed by the cognitive engine as an
+> `AGENT` — so it is clamped to `AI_ASSUMPTION` and held to every agent rule.
+> Failures become the self model's known failures under
+> `<task kind>:reasoning:<KIND>`, which the next context for that kind of task
+> must include. The `runs` projection rebuilds every run, including one that
+> was interrupted. **Not implemented:** the other phases (`OBSERVE`, `PLAN`,
+> `ACT`, `VERIFY`, …), the `BLOCKED_ON_HUMAN` outcome, task splitting, and
+> retries.
+
 ---
 
 ## 3. World model
@@ -315,9 +339,9 @@ live with; it records the acceptance rather than pretending the gap closed.
 > and `selectResolution` for §7.2. Detection sources 1, 3 and 5 are pure
 > detectors returning drafts — they never write, and never report a gap an open
 > uncertainty already covers; source 4 is the contradiction engine. **Not
-> implemented:** source 2 (needs the graph) and the `UNCERTAINTY` graph node
-> and `BLOCKS` edge (the core orchestrator mirrors records into the graph; it
-> is not built yet).
+> implemented:** source 2 (needs the graph). The `UNCERTAINTY` graph node and
+> its `BLOCKS` edges are written by the orchestrator's graph mirror since P4
+> (ADR-0018 §4).
 
 ---
 
@@ -452,8 +476,8 @@ from an authenticated session. Terminal prompts are not a production interface.
 > refused. Scores are recorded at drafting and again at asking, with the
 > scorer's name and version. Batching is the pure `nextQuestionBatch`; the
 > interface contract is `pendingHumanQuestions` and `questionView`. **Not
-> implemented:** the web interface and its authentication (SPEC-06), and the
-> `QUESTION` graph node (ADR-0016).
+> implemented:** the web interface and its authentication (SPEC-06). The
+> `QUESTION` graph node is written by the graph mirror since P4 (ADR-0018 §4).
 
 ---
 

@@ -159,6 +159,16 @@ logging for the audit trail.
 **Design:** Bedrock is the **first adapter**, not a dependency of the core
 ([ADR-0007](../adr/0007-reasoning-provider-port.md)). The core's full test suite
 must pass with the mock adapter alone.
+**Implemented (P4,** [ADR-0018](../adr/0018-reasoning-and-orchestration.md)**):**
+`BedrockReasoningProvider` in `packages/adapters-aws`, on the Bedrock Runtime
+Converse API (`@aws-sdk/client-bedrock-runtime` 3.1136.0): one attempt per call,
+an abort at the request's timeout, credentials only from the SDK's default
+chain, SDK errors and stop reasons mapped onto the port's typed failures, and
+Converse's `json_schema` output format only when configured for a model that
+supports it. It is unit-tested against a fake client. A live integration suite
+exists but is skipped unless explicitly enabled, and **has not yet been run
+against AWS**; it is required before P8 acceptance. No other AWS service is
+used.
 
 ### 3.11 Amazon Bedrock AgentCore — agent runtime (conditional)
 **Owns:** hosting the agent runtime and tool invocation loop, *if* evaluation

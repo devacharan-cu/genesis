@@ -17,6 +17,8 @@ export type GenesisErrorCode =
   | 'AUTHORITY_NOT_PERMITTED'
   | 'PROJECTION_DIVERGENCE'
   | 'COGNITIVE_RULE_VIOLATION'
+  | 'REASONING_FAILED'
+  | 'MIRROR_DIVERGENCE'
   | 'NOT_FOUND';
 
 export class GenesisError extends Error {
@@ -125,5 +127,19 @@ export class CognitiveRuleViolationError extends GenesisError {
 export class AuthorityNotPermittedError extends GenesisError {
   constructor(message: string, details?: Readonly<Record<string, unknown>>) {
     super('AUTHORITY_NOT_PERMITTED', message, details);
+  }
+}
+
+/**
+ * The graph holds a mirrored node or edge that disagrees with the canonical
+ * record it mirrors (ADR-0016, ADR-0018 §4).
+ *
+ * The mirror never overwrites to make them agree: a disagreement means
+ * something other than the mirror wrote a cognitive record into the graph, and
+ * that is the failure ADR-0016 exists to prevent, so it is surfaced.
+ */
+export class MirrorDivergenceError extends GenesisError {
+  constructor(message: string, details: Readonly<Record<string, unknown>> = {}) {
+    super('MIRROR_DIVERGENCE', message, details);
   }
 }

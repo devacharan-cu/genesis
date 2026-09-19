@@ -60,6 +60,9 @@ Binding rules:
 
 1. **No package other than `packages/reasoning` imports a model SDK.** The core
    and every agent see only the port.
+   *Amended by [ADR-0018](0018-reasoning-and-orchestration.md): model SDKs live
+   in adapter packages (`adapters-aws` for Bedrock), outside the core's
+   dependency closure; `packages/reasoning` holds the port and the mock only.*
 2. **Structured output only.** Every call declares an `outputSchema` and the
    result is validated before anything reads it. Free-form text is never parsed
    heuristically.

@@ -33,6 +33,9 @@
       "@genesis/projections": ["packages/projections/src/index.ts"],
       "@genesis/cognition": ["packages/cognition/src/index.ts"],
       "@genesis/context": ["packages/context/src/index.ts"],
+      "@genesis/reasoning": ["packages/reasoning/src/index.ts"],
+      "@genesis/core": ["packages/core/src/index.ts"],
+      "@genesis/adapters-aws": ["packages/adapters-aws/src/index.ts"],
       "@genesis/adapters-sqlite": ["packages/adapters-sqlite/src/index.ts"],
       "@genesis/testkit": ["packages/testkit/src/index.ts"]
     }

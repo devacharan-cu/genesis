@@ -43,6 +43,14 @@ export interface CognitiveEngineOptions {
   readonly scorer?: QuestionScorer;
 }
 
+export interface ExecuteOptions {
+  /**
+   * The cognitive cycle the command belongs to, stamped on every event it
+   * appends, so a run's cognitive changes can be read back as one unit.
+   */
+  readonly cycleId?: string;
+}
+
 export interface ExecutionResult {
   /** Exactly the events this command appended, as stored. */
   readonly events: readonly GenesisEvent[];
@@ -73,8 +81,13 @@ export class CognitiveEngine {
   }
 
   /** Decides and records one command. Throws, having appended nothing, if it is refused. */
-  execute(scope: ProjectScope, actor: EventActor, command: unknown): Promise<ExecutionResult> {
-    return this.#serialise(scope.projectId, () => this.#attempt(scope, actor, command, 1));
+  execute(
+    scope: ProjectScope,
+    actor: EventActor,
+    command: unknown,
+    options: ExecuteOptions = {},
+  ): Promise<ExecutionResult> {
+    return this.#serialise(scope.projectId, () => this.#attempt(scope, actor, command, options, 1));
   }
 
   /**
@@ -89,6 +102,7 @@ export class CognitiveEngine {
     scope: ProjectScope,
     actor: EventActor,
     command: unknown,
+    options: ExecuteOptions,
     attempt: number,
   ): Promise<ExecutionResult> {
     const current = await this.#catchUp(scope);
@@ -98,7 +112,8 @@ export class CognitiveEngine {
       ids: this.#ids,
       scorer: this.#scorer,
     };
-    const inputs = decide(current.state, command, ctx);
+    const decided = decide(current.state, command, ctx);
+    const inputs = options.cycleId === undefined ? decided : decided.map((i) => ({ ...i, cycleId: options.cycleId }));
 
     let appended: GenesisEvent[];
     try {
@@ -106,7 +121,7 @@ export class CognitiveEngine {
     } catch (error) {
       // Only a lost race is retried, and only a bounded number of times.
       if (error instanceof SequenceConflictError && attempt < this.#maxAttempts) {
-        return this.#attempt(scope, actor, command, attempt + 1);
+        return this.#attempt(scope, actor, command, options, attempt + 1);
       }
       throw error;
     }

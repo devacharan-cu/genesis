@@ -74,6 +74,13 @@ behind ledger events — so the whole graph, not just its cognitive part, is
 rebuildable — is a separate change that needs its own ADR, because it alters
 two ports and both adapters.
 
+**Status update (P4, [ADR-0018](0018-reasoning-and-orchestration.md) §4).** The
+mirror now exists, in `packages/core`. It reconciles the graph from the
+cognition projection — itself a pure fold of the ledger — rather than consuming
+events one by one, and the orchestration conformance suite proves rule 4 on both
+adapters by mirroring a replayed state into an empty graph and comparing. The
+migration of the P1 graph and memory writes behind ledger events is still open.
+
 ## Consequences
 
 **Positive**

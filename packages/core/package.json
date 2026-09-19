@@ -1,0 +1,24 @@
+{
+  "name": "@genesis/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The core orchestrator: context, reasoning, proposals through the cognitive deciders, the graph mirror and the run projection (ADR-0018). Depends on the reasoning port, never on a provider.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/cognition": "workspace:*",
+    "@genesis/context": "workspace:*",
+    "@genesis/core-types": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

@@ -10,6 +10,7 @@ import {
   ContradictionId,
   CriterionId,
   GoalId,
+  newCycleId,
   newProjectId,
   projectScope,
   QuestionId,
@@ -43,5 +44,17 @@ describe('production defaults', () => {
     expect(GoalId.safeParse(goal?.id).success).toBe(true);
     expect(CriterionId.safeParse(goal?.successCriteria[0]?.id).success).toBe(true);
     expect(Date.parse(goal?.createdAt ?? '')).toBeGreaterThanOrEqual(before - 1000);
+  });
+});
+
+describe('cycles', () => {
+  it('stamps every event of a command with its cycle, and leaves it null otherwise', async () => {
+    const engine = new CognitiveEngine(new InMemoryEventLedger());
+    const scope = projectScope(newProjectId());
+    const cycleId = newCycleId();
+    const tagged = await engine.execute(scope, HUMAN, { kind: 'PROPOSE_GOAL', description: 'g', priority: 1 }, { cycleId });
+    expect(tagged.events.map((e) => e.cycleId)).toEqual([cycleId]);
+    const untagged = await engine.execute(scope, HUMAN, { kind: 'PROPOSE_GOAL', description: 'h', priority: 1 });
+    expect(untagged.events.map((e) => e.cycleId)).toEqual([null]);
   });
 });

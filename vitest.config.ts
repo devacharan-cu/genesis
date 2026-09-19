@@ -49,6 +49,17 @@ const SAFETY_CRITICAL = [
   'packages/context/src/gather.ts', // reads through read-only views; refuses unknown task nodes
   'packages/context/src/model.ts', // weights and inputs are checked before they become scores
   'packages/context/src/scoring.ts', // the six signals, deterministic
+  'packages/reasoning/src/port.ts', // what crosses the port, and what may not
+  'packages/reasoning/src/errors.ts', // every provider failure is typed; no output is repaired
+  'packages/reasoning/src/render.ts', // content cannot close its own fence (SPEC-06 6)
+  'packages/reasoning/src/mock.ts', // the provider the whole core suite trusts
+  'packages/adapters-aws/src/bedrock.ts', // Bedrock failures and stops mapped, never guessed
+  'packages/core/src/events.ts', // the run's record
+  'packages/core/src/proposals.ts', // the only door from model output to state (ADR-0018)
+  'packages/core/src/request.ts', // untrusted content marked, requests hashed canonically
+  'packages/core/src/orchestrator.ts', // context -> reasoning -> proposals -> mirror, all recorded
+  'packages/core/src/mirror.ts', // the graph derived from canonical state (ADR-0016)
+  'packages/core/src/runs.ts', // failed and interrupted runs visible from the ledger
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -65,6 +76,9 @@ export default defineConfig({
       '@genesis/projections': pkg('projections'),
       '@genesis/cognition': pkg('cognition'),
       '@genesis/context': pkg('context'),
+      '@genesis/reasoning': pkg('reasoning'),
+      '@genesis/core': pkg('core'),
+      '@genesis/adapters-aws': pkg('adapters-aws'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/testkit': pkg('testkit'),
     },

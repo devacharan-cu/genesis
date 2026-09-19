@@ -338,3 +338,37 @@ memory and graph stores only through read-only views.
 E1 and E3–E7 remain open. **E5** is now concrete: P3 ships lexical relevance
 only, behind the `RelevanceScorer` interface, and an embedding scorer is the
 change E5 unlocks. **E1** is still the one to settle before P5.
+
+---
+
+## I. P4 decisions and findings (2026-09-19)
+
+P4 required one architectural decision, recorded before implementation as
+[ADR-0018](../adr/0018-reasoning-and-orchestration.md). It **amends ADR-0007
+binding rule 1**: model SDKs live in adapter packages (`adapters-aws`), not in
+`packages/reasoning`, so no SDK is in the core's dependency closure; the
+boundary checker restricts every `@aws-sdk/*` module to `adapters-aws`.
+
+Constraints found while building it, recorded rather than worked around:
+
+- **Ledger event ids are minted at append time**, so two runs of the same
+  inputs produce identical events but different ids and hash chains. Run
+  records therefore cite the ledger positions of the events a proposal caused,
+  not their ids, and "deterministic" means identical up to minted ids.
+- **The self model's `TASK_STARTED`/`TASK_FINISHED` payload is strict**
+  (`{ taskId }` only), so run outcomes live in the orchestrator's own events and
+  the `runs` projection, not in the self model.
+- **Bedrock native structured output is model-specific.** The adapter states
+  the schema in the prompt always, and sends Converse's `json_schema` format
+  only when configured to.
+- **The graph mirror is not concurrency-safe across processes.** Runs for one
+  project are serialised in-process; two processes mirroring one project into
+  one graph could race on the same derived id. A single mirror writer per
+  project is assumed until P8's orchestration settles it.
+
+### Status of the remaining open decisions
+
+E1 (settle before P5), E3, E4, E5, E6 remain open. **E7** (Bedrock AgentCore)
+is unaffected: P4 uses only the Bedrock Runtime Converse API. The Bedrock live
+integration suite has not been run; it needs AWS credentials and model access,
+which is a human authorisation step.

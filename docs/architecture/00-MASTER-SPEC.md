@@ -531,6 +531,10 @@ built:
 12. Context assembly — mandatory inclusions that cannot be crowded out, the
     split on overflow, and the signals and manifest that explain every choice
     ([ADR-0017](../adr/0017-deterministic-scoring-and-context-assembly.md))
+13. The reasoning boundary and the orchestrator — typed provider failures,
+    fenced untrusted content, the four proposal kinds a model may make, the
+    recorded run, the run projection, and the graph mirror derived from
+    canonical state ([ADR-0018](../adr/0018-reasoning-and-orchestration.md))
 
 Adding a file to this list is a one-line config change. Removing one requires an
 ADR, because it is a deliberate reduction in what the project guarantees.
@@ -560,6 +564,7 @@ Full rationale lives in `docs/adr/`. Summary:
 | Human questions | Ledger records; a web interface is the production surface | [ADR-0015](../adr/0015-questions-as-ledger-records.md) |
 | Graph mirroring | Owned by the orchestrator; the graph is never a source of truth | [ADR-0016](../adr/0016-orchestrator-owns-graph-mirroring.md) |
 | Scoring and context | Deterministic, replaceable scorers; context assembly is pure | [ADR-0017](../adr/0017-deterministic-scoring-and-context-assembly.md) |
+| Reasoning and orchestration | Port + mock in `reasoning`, Bedrock in `adapters-aws`, orchestrator in `core`; model output enters state only as agent proposals | [ADR-0018](../adr/0018-reasoning-and-orchestration.md) |
 
 ---
 

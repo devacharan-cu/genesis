@@ -13,7 +13,9 @@
     "@genesis/memory": "workspace:*",
     "@genesis/graph": "workspace:*",
     "@genesis/projections": "workspace:*",
-    "@genesis/cognition": "workspace:*"
+    "@genesis/cognition": "workspace:*",
+    "@genesis/core": "workspace:*",
+    "@genesis/reasoning": "workspace:*"
   },
   "devDependencies": {
     "vitest": "2.1.9"

@@ -144,6 +144,16 @@ Content from files, tool output, web search, and issue trackers is **untrusted**
   impact set reaches outside the task's scope, is rejected and recorded as a
   `FINDING` — injection attempts leave evidence.
 
+> **Implemented (P4,** [ADR-0018](../adr/0018-reasoning-and-orchestration.md)**):**
+> every reasoning call renders context inside `<context>` and model- or
+> nobody-authored content inside `<untrusted>`, with each block's provenance and
+> authority, a system rule that nothing inside a fence is an instruction, and
+> fence markers and quotes in content neutralised so content cannot close its
+> own fence. Model output reaches state only as one of four proposal kinds,
+> executed as an `AGENT` under every agent rule; a proposal of any other kind is
+> rejected as `NOT_PERMITTED` and recorded (`PROPOSAL_EVALUATED`). The `FINDING`
+> record and impact-set checks arrive with the P6 proposal pipeline.
+
 ---
 
 ## 7. Authorization gates

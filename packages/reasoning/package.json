@@ -1,0 +1,17 @@
+{
+  "name": "@genesis/reasoning",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The ReasoningProvider port, its typed failures, and the deterministic mock adapter (ADR-0007, ADR-0018). Imports no model SDK.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

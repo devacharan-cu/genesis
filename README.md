@@ -4,8 +4,8 @@ An experimental **self-questioning software intelligence**: an engineering
 system that maintains persistent, structured knowledge about a software project
 and uses it to build, test, repair, verify, deploy and maintain software.
 
-> **Current status: Phases 1–3 complete — the state substrate, the cognitive
-> primitives, and inquiry.** What exists and is tested: the canonical type layer,
+> **Current status: Phases 1–4 complete — the state substrate, the cognitive
+> primitives, inquiry, and the reasoning provider with the core orchestrator.** What exists and is tested: the canonical type layer,
 > the hash-chained event ledger, the memory store with its write-time authority
 > policy, the knowledge graph with invariants G1–G13, projections that rebuild
 > the world and self models from the ledger, the **goal system, belief system,
@@ -14,14 +14,22 @@ and uses it to build, test, repair, verify, deploy and maintain software.
 > replaceable scorer, answered by a person through `ANSWER`, `REJECT_ASSUMPTION`
 > or `ACCEPT_RISK` with the effects applied in the same append — and **context
 > assembly**: budgeted, explainable, deterministic selection of what a task is
-> shown, with mandatory items that cannot be crowded out. Every port has an
-> in-memory and a SQLite adapter running one shared conformance suite.
+> shown, with mandatory items that cannot be crowded out. P4 adds the
+> **`ReasoningProvider` port** with a deterministic mock and a **Bedrock
+> adapter** (Converse API), and the **core orchestrator**: one task runs from
+> recorded context to a recorded model call to proposals that enter state only
+> as an agent's — four permitted kinds, clamped to `AI_ASSUMPTION` and checked by
+> the cognitive deciders — with `SPLIT_REQUIRED` stopping a run before any call,
+> every provider failure typed and recorded, and the graph **mirrored from the
+> committed cognitive state** and proven rebuildable from the ledger. Every port
+> has an in-memory and a SQLite adapter running one shared conformance suite.
 >
-> What is **not** built: the cognitive loop and orchestrator, the web question
-> interface and its authentication, the graph mirror of cognitive records, the
-> reasoning provider, experiments, verification and agents. Nothing yet decides
-> *what to do next* on its own, and no person can yet answer a question except
-> through an in-process caller. The roadmap marks what is done and what is not,
+> What is **not** built: the full cognitive loop (planning, acting, verifying),
+> task splitting, the web question interface and its authentication,
+> experiments, verification and agents. The Bedrock adapter is unit-tested
+> against a fake client; its live integration suite exists but has **not** been
+> run against AWS. No person can yet answer a question except through an
+> in-process caller. The roadmap marks what is done and what is not,
 > and nothing in this README describes a capability that has not been executed.
 
 ---
@@ -116,7 +124,7 @@ failing.
 | **P1** | Core state substrate: types, storage ports, SQLite adapters, event ledger | 🟢 Slices 1-4 done: types + hash-chained ledger, MemoryStore + authority policy, GraphStore + invariants G1-G13, projections with replay/live equivalence |
 | **P2** | Cognitive primitives: world/self model, goals, beliefs, contradictions | 🟢 Done: goal system, belief ladder, uncertainty engine, contradiction engine as deciders over the ledger; conditional append; self model v2 |
 | **P3** | Inquiry: question engine, scoring, context assembly | 🟢 Done: questions as ledger records with ANSWER / REJECT_ASSUMPTION / ACCEPT_RISK responses; deterministic, replaceable question scorer; context assembly with mandatory inclusions, split-on-overflow and recorded manifests. The web interface is specified (ADR-0015), not built |
-| **P4** | `ReasoningProvider` port, mock and Bedrock adapters | ⬜ |
+| **P4** | `ReasoningProvider` port, mock and Bedrock adapters | 🟢 Done: the port with typed failures, the deterministic mock, the Bedrock Converse adapter (unit-tested; live suite not yet run), and the core orchestrator — recorded context, recorded calls, proposals through the deciders, `SPLIT_REQUIRED` handling, and the graph mirror (ADR-0018) |
 | **P5** | Experiments, sandbox, verification engine | ⬜ |
 | **P6** | Agents (proposal-based) | ⬜ |
 | **P7** | Software factory and self-repair loop | ⬜ |
@@ -157,6 +165,9 @@ pnpm check:boundaries        # package dependency rules (ADR-0001)
 | `packages/graph` | `GraphStore` port, node/edge schemas, invariants G1–G13, depth-capped traversal and impact analysis, in-memory adapter |
 | `packages/projections` | Projections as pure folds over the ledger, replay/live equivalence by digest, `ProjectionSnapshotStore` port, world and self model projectors |
 | `packages/cognition` | Goal system, belief system, uncertainty engine, contradiction engine and question engine: pure deciders, one fold, a replaceable question scorer, and an engine that appends conditionally on the head it decided against |
+| `packages/reasoning` | The `ReasoningProvider` port, typed provider failures, provider-neutral prompt rendering with fenced untrusted content, and the deterministic `MockReasoningProvider`. Imports no model SDK |
+| `packages/core` | The orchestrator (context → recorded call → proposals through the cognitive deciders → graph mirror), the four permitted proposal kinds, the graph mirror derived from canonical state, and the run projection. Depends on the reasoning port, never on a provider |
+| `packages/adapters-aws` | `BedrockReasoningProvider` on the Bedrock Runtime Converse API. The only package permitted to import the AWS SDK |
 | `packages/context` | Context assembly: candidate builders, six weighted signals with replaceable relevance and token estimators, budgeted selection with mandatory inclusions, and the `CONTEXT_ASSEMBLED` manifest. Reads stores only through read-only views |
 | `packages/adapters-sqlite` | SQLite adapters for all four ports. The only package permitted to import `node:sqlite` |
 | `packages/testkit` | Conformance suites written against the ports |

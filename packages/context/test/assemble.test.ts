@@ -180,11 +180,19 @@ describe('determinism and explanation', () => {
 
   it('is recorded as a CONTEXT_ASSEMBLED event the ledger will accept, by the system only', () => {
     const { manifest } = assembleContext(request(), [candidate('a'), candidate('p', { mandatory: 'POLICY', kind: 'POLICY' })]);
-    const event = contextAssembledEvent(manifest, SYSTEM, AS_OF);
+    const provenance = {
+      asOfSeq: 7,
+      impact: [{ nodeId: 'node_01ARZ3NDEKTSV4RRFFQ69G5FA1', depth: 1, weakestAuthorityRank: 4 }] as never,
+    };
+    const event = contextAssembledEvent(manifest, provenance, SYSTEM, AS_OF);
     expect(EventInput.safeParse(event).success).toBe(true);
     expect(JsonValue.safeParse(event.payload).success).toBe(true);
-    expect(event).toMatchObject({ type: CONTEXT_ASSEMBLED, authority: 'VERIFIED_SYSTEM_STATE', payload: manifest });
-    expect(() => contextAssembledEvent(manifest, AGENT, AS_OF)).toThrow(/recorded by the system, not by AGENT/);
-    expect(() => contextAssembledEvent(manifest, HUMAN, AS_OF)).toThrow(ValidationError);
+    expect(event).toMatchObject({
+      type: CONTEXT_ASSEMBLED,
+      authority: 'VERIFIED_SYSTEM_STATE',
+      payload: { manifest, asOfSeq: 7, impact: [{ nodeId: 'node_01ARZ3NDEKTSV4RRFFQ69G5FA1', depth: 1, weakestAuthorityRank: 4 }] },
+    });
+    expect(() => contextAssembledEvent(manifest, provenance, AGENT, AS_OF)).toThrow(/recorded by the system, not by AGENT/);
+    expect(() => contextAssembledEvent(manifest, provenance, HUMAN, AS_OF)).toThrow(ValidationError);
   });
 });
