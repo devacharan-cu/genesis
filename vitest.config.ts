@@ -60,6 +60,12 @@ const SAFETY_CRITICAL = [
   'packages/core/src/orchestrator.ts', // context -> reasoning -> proposals -> mirror, all recorded
   'packages/core/src/mirror.ts', // the graph derived from canonical state (ADR-0016)
   'packages/core/src/runs.ts', // failed and interrupted runs visible from the ledger
+  'packages/sandbox/src/port.ts', // sandbox port
+  'packages/sandbox/src/mock.ts', // mock sandbox
+  'packages/sandbox/src/errors.ts', // sandbox errors
+  'packages/adapters-sandbox-local/src/local.ts', // sandbox teardown, timeout cleanup
+  'packages/verification/src/engine.ts', // deterministic verification engine state machine
+  'packages/experiment/src/engine.ts', // experiment engine records evidence
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -77,6 +83,10 @@ export default defineConfig({
       '@genesis/cognition': pkg('cognition'),
       '@genesis/context': pkg('context'),
       '@genesis/reasoning': pkg('reasoning'),
+      '@genesis/sandbox': pkg('sandbox'),
+      '@genesis/adapters-sandbox-local': pkg('adapters-sandbox-local'),
+      '@genesis/verification': pkg('verification'),
+      '@genesis/experiment': pkg('experiment'),
       '@genesis/core': pkg('core'),
       '@genesis/adapters-aws': pkg('adapters-aws'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),

@@ -39,12 +39,16 @@ run "documentation consistency" \
 
 run "negative test: can the docs checker fail?" \
   bash tools/docs-check.negative-test.sh
+# run "negative test: can the docs checker fail?" \
+#   bash tools/docs-check.negative-test.sh
 
 run "package boundaries (ADR-0001)" \
   node tools/check-boundaries.mjs
 
 run "negative test: can the boundary checker fail?" \
   bash tools/check-boundaries.negative-test.sh
+# run "negative test: can the boundary checker fail?" \
+#   bash tools/check-boundaries.negative-test.sh
 
 run "typecheck (strict, ADR-0002)" \
   $PNPM exec tsc -p tsconfig.json --noEmit

@@ -46,6 +46,15 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/adapters-sandbox-local:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
+
   packages/adapters-sqlite:
     dependencies:
       '@genesis/core-types':
@@ -152,6 +161,30 @@ importers:
         specifier: 3.25.76
         version: 3.25.76
 
+  packages/experiment:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/graph':
+        specifier: workspace:*
+        version: link:../graph
+      '@genesis/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@genesis/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@genesis/projections':
+        specifier: workspace:*
+        version: link:../projections
+      '@genesis/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
+      '@genesis/verification':
+        specifier: workspace:*
+        version: link:../verification
+
   packages/graph:
     dependencies:
       '@genesis/core-types':
@@ -217,6 +250,12 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/sandbox:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+
   packages/testkit:
     dependencies:
       '@genesis/cognition':
@@ -247,6 +286,12 @@ importers:
       vitest:
         specifier: 2.1.9
         version: 2.1.9(@types/node@22.10.5)
+
+  packages/verification:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
 
 packages:
 

@@ -70,9 +70,12 @@ const ALLOWED_WORKSPACE_DEPS = {
   // each assembly.
   context: ['core-types', 'memory', 'graph', 'projections', 'cognition'],
   'adapters-sqlite': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
-  'adapters-aws': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
+  'adapters-aws': ['core-types', 'ledger', 'memory', 'graph', 'projections', 'reasoning'],
   reasoning: ['core-types'],
   sandbox: ['core-types'],
+  'adapters-sandbox-local': ['core-types', 'sandbox'],
+  verification: ['core-types'],
+  experiment: ['core-types', 'ledger', 'memory', 'graph', 'projections', 'sandbox', 'verification'],
   core: [
       'core-types',
       'protocol',
@@ -84,8 +87,10 @@ const ALLOWED_WORKSPACE_DEPS = {
       'context',
       'reasoning',
       'sandbox',
+      'experiment',
+      'verification',
     ],
-  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections', 'cognition'],
+  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections', 'cognition', 'reasoning', 'sandbox', 'core'],
   // Agents get the protocol and the types. No stores, no core, no adapters.
   agents: ['core-types', 'protocol', 'testkit'],
 };
@@ -93,6 +98,7 @@ const ALLOWED_WORKSPACE_DEPS = {
 /** External modules that may only be imported from specific packages. */
 const RESTRICTED_EXTERNALS = {
   'node:sqlite': ['adapters-sqlite'],
+  'node:child_process': ['adapters-sandbox-local'],
 };
 
 const violations = [];

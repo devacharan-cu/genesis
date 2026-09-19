@@ -34,6 +34,8 @@ export const ID_PREFIXES = {
   CriterionId: 'crit',
   QuestionId: 'qst',
   ReasoningCallId: 'rsn',
+  ExperimentId: 'exp',
+  ObservationId: 'obs',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -83,6 +85,12 @@ export type QuestionId = z.infer<typeof QuestionId>;
 export const ReasoningCallId = idSchema(ID_PREFIXES.ReasoningCallId).brand<'ReasoningCallId'>();
 export type ReasoningCallId = z.infer<typeof ReasoningCallId>;
 
+export const ExperimentId = idSchema(ID_PREFIXES.ExperimentId).brand<'ExperimentId'>();
+export type ExperimentId = z.infer<typeof ExperimentId>;
+
+export const ObservationId = idSchema(ID_PREFIXES.ObservationId).brand<'ObservationId'>();
+export type ObservationId = z.infer<typeof ObservationId>;
+
 /** Generates a new id of the given kind. */
 function mint(kind: IdKind): string {
   return `${ID_PREFIXES[kind]}_${ulid()}`;
@@ -104,6 +112,8 @@ export const newContradictionId = (): ContradictionId =>
 export const newCriterionId = (): CriterionId => CriterionId.parse(mint('CriterionId'));
 export const newQuestionId = (): QuestionId => QuestionId.parse(mint('QuestionId'));
 export const newReasoningCallId = (): ReasoningCallId => ReasoningCallId.parse(mint('ReasoningCallId'));
+export const newExperimentId = (): ExperimentId => ExperimentId.parse(mint('ExperimentId'));
+export const newObservationId = (): ObservationId => ObservationId.parse(mint('ObservationId'));
 
 /** A lowercase hex SHA-256 digest. */
 export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/, {

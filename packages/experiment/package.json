@@ -1,0 +1,19 @@
+{
+  "name": "@genesis/experiment",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo 'Run from root'"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/sandbox": "workspace:*",
+    "@genesis/verification": "workspace:*"
+  }
+}

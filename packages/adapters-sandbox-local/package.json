@@ -1,0 +1,14 @@
+{
+  "name": "@genesis/adapters-sandbox-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo 'Run from root'"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/sandbox": "workspace:*"
+  }
+}

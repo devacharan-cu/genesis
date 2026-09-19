@@ -31,8 +31,8 @@ missed=0
 
 stage() {
   rm -rf "$TMP/w"
-  cp -r "$SRC" "$TMP/w"
-  rm -rf "$TMP/w/.git" "$TMP/w/node_modules"
+  mkdir -p "$TMP/w"
+  cp -r "$SRC"/docs "$SRC"/README.md "$SRC"/tools "$SRC"/package.json "$SRC"/tsconfig.json "$TMP/w/"
 }
 
 fingerprint() {
