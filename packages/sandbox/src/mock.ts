@@ -5,7 +5,13 @@ export interface MockSandboxRule {
   matchCommand: string[];
   delayMs?: number;
   result?: SandboxResult;
-  error?: SandboxError;
+  /**
+   * What the run throws. Deliberately `unknown`: a real provider can fail in
+   * ways that are not a `SandboxError`, or not an `Error` at all, and every
+   * caller has to classify whatever arrives. A mock that could only throw the
+   * typed error would leave that classification untested.
+   */
+  error?: unknown;
 }
 
 export class MockSandboxProvider implements SandboxProvider {
@@ -65,7 +71,7 @@ export class MockSandboxProvider implements SandboxProvider {
       });
     }
 
-    if (rule?.error) {
+    if (rule?.error !== undefined) {
       throw rule.error;
     }
     

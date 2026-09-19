@@ -132,13 +132,18 @@ export function checkProposal(item: unknown): ProposalCheck {
  * The cognitive command a checked proposal becomes. The core fills in what the
  * model may not: a belief's reasoning call is the call it came from, and its
  * authority is left to the belief rules, which cap an agent at AI_ASSUMPTION.
+ *
+ * `callId` is null when there was no call — a deterministic agent proposing
+ * from rules rather than from a model (ADR-0020 §2). The belief then records no
+ * reasoning call, because inventing one would attribute it to a model that was
+ * never asked.
  */
-export function toCommand(proposal: Proposal, callId: string): Record<string, unknown> {
+export function toCommand(proposal: Proposal, callId: string | null): Record<string, unknown> {
   const { rationale, contributesTo: _served, ...rest } = proposal;
   switch (rest.kind) {
     case 'RECORD_BELIEF':
       // The rationale doubles as the belief's own: an ASSUMED belief needs one.
-      return { ...rest, rationale, reasoningCallId: callId };
+      return callId === null ? { ...rest, rationale } : { ...rest, rationale, reasoningCallId: callId };
     case 'RECORD_UNCERTAINTY':
     case 'DRAFT_QUESTION':
     case 'RECORD_CONTRADICTION':

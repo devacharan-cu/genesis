@@ -1,4 +1,4 @@
-import { type EventLedger } from '@genesis/ledger';
+import { canonicalJson, type EventLedger, sha256Hex } from '@genesis/ledger';
 import { type SandboxProvider, type SandboxRequest, SandboxError } from '@genesis/sandbox';
 import type { EventInput, ProjectId } from '@genesis/core-types';
 import { newExperimentId, newObservationId } from '@genesis/core-types';
@@ -39,7 +39,13 @@ export class ExperimentEngine {
       // 2. Execute
       result = await this.sandbox.run(target.sandboxRequest, abortSignal);
 
-      // 3. Record COMPLETED evidence
+      // 3. Record COMPLETED evidence.
+      //
+      // The hash covers everything the sandbox observed, by the ledger's own
+      // canonical form. An observation whose hash is a constant is not
+      // tamper-evident, it only looks it, so this commits to the exit code and
+      // both streams rather than to a label.
+      const observed = { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr };
       await this.ledger.append({ projectId }, {
         type: 'EXPERIMENT_COMPLETED',
         actor: { kind: 'SYSTEM', id: 'experiment-engine' },
@@ -54,7 +60,7 @@ export class ExperimentEngine {
             kind: 'EVIDENCE',
             environment: 'SANDBOX',
             raw: result.stdout + '\n' + result.stderr,
-            hash: 'hash-placeholder', // In a real system, compute SHA-256
+            hash: sha256Hex(canonicalJson(observed)),
           },
         },
       } as EventInput);

@@ -1,0 +1,18 @@
+{
+  "name": "@genesis/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The agent contract, the services an agent is handed, the registry, and the role implementations (SPEC-04, ADR-0020). It depends on no store, no ledger and no core, which is what makes 'an agent cannot mutate canonical state' a property of the package graph.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "@genesis/protocol": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

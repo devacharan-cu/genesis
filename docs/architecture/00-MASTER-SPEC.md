@@ -350,6 +350,58 @@ REJECT_ASSUMPTION
 ACCEPT_RISK
 ```
 
+The agent vocabularies from [`04-AGENT-ARCHITECTURE.md`](04-AGENT-ARCHITECTURE.md)
+§2 and §3 and [ADR-0020](../adr/0020-agent-protocol-and-runtime.md). They are
+canonical because the runtime routes on them: a message kind the router does not
+know is a message that silently does nothing, and a role declared in one place
+only is a role no policy covers.
+
+`AgentRole` is the roster. A role appears here when its mandate is defined, which
+is before its implementation exists — the phase column of SPEC-04 §2 says when
+each one lands.
+
+```canonical:AgentRole
+PLANNER
+ARCHITECT
+RESEARCHER
+BUILDER
+QA
+SECURITY
+VERIFIER
+REPAIR
+DEPLOYMENT
+```
+
+`MessageKind` is the whole protocol. There is no tenth kind and no free-form
+channel: traffic that is not one of these does not cross the bus.
+
+```canonical:MessageKind
+TASK_ASSIGNMENT
+PROPOSAL
+FINDING
+QUESTION
+EVIDENCE_SUBMISSION
+STATUS
+RESULT
+ERROR
+CANCEL
+```
+
+`AgentTaskState` is where a task is, not what it is doing — the steps of a run
+are the orchestrator's events, recorded once. `COMPLETED`, `FAILED` and
+`CANCELLED` are terminal. `BLOCKED` is not, because what blocks a task can be
+resolved.
+
+```canonical:AgentTaskState
+ASSIGNED
+RUNNING
+BLOCKED
+AWAITING_VERIFICATION
+COMPLETED
+FAILED
+CANCELLED
+```
+
 ---
 
 ## 5. Canonical project state
@@ -482,7 +534,7 @@ criteria are met by executed tests, not by inspection.
 | **P3** | Inquiry | Question engine, scoring module, context assembly | Question scoring is deterministic and unit-tested; scorer is swappable |
 | **P4** | Reasoning provider | `ReasoningProvider` port, mock adapter, Bedrock adapter | Core test suite passes with mock adapter only |
 | **P5** | Experiments & verification | Experiment engine, sandbox runner, verification state machine | Experiments produce real observations; no state advances without evidence |
-| **P6** | Agents | Planner, Architect, Builder, QA, Verifier, Repair (proposal-based) | Agents cannot mutate state except through accepted proposals |
+| **P6** | Agents | Typed agent protocol, manifest and registry, task state machine, agent runtime, first roles (Planner, Architect, Researcher, Verifier) | Agents cannot mutate state except through accepted proposals, enforced by the package graph and proven by a conformance suite; every agent task replays from the ledger |
 | **P7** | Software factory | Intent → requirements → build → test → repair → verify | End-to-end build of a reference project, self-repaired from a real failure |
 | **P8** | AWS deployment | Adapters for DynamoDB/Neptune/S3, Step Functions orchestration, Cognito | Same core test suite passes against cloud adapters |
 

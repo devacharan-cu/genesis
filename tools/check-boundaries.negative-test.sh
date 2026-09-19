@@ -133,6 +133,22 @@ run_case "a new package with no declared boundary rule" \
   'not listed in ALLOWED_WORKSPACE_DEPS' \
   bash -c "mkdir -p packages/rogue/src && printf '{\"name\":\"@genesis/rogue\",\"private\":true}' > packages/rogue/package.json && printf 'export const x = 1;\n' > packages/rogue/src/index.ts"
 
+# The three below are ADR-0006's central claim, checked directly rather than
+# inferred from the generic cases: an agent that can reach a store, the ledger,
+# or the core is an agent that can write canonical truth. SPEC-04 §3.3 says this
+# boundary is enforced by the build, so the build must be able to fail on it.
+run_case "an agent reaches the ledger" \
+  'agents.*imports @genesis/ledger, which ADR-0001 does not permit' \
+  add_import packages/agents/src/contract.ts '@genesis/ledger'
+
+run_case "an agent reaches a store" \
+  'agents.*imports @genesis/memory, which ADR-0001 does not permit' \
+  add_import packages/agents/src/roles.ts '@genesis/memory'
+
+run_case "an agent reaches the core, inverting the dependency direction" \
+  'agents.*imports @genesis/core, which ADR-0001 does not permit' \
+  add_import packages/agents/src/registry.ts '@genesis/core'
+
 echo "────────────────────────────────────────────────────────────"
 echo "detected: $detected   missed/invalid: $missed"
 

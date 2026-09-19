@@ -34,6 +34,7 @@ listed downsides has not been thought through.
 | [0017](0017-deterministic-scoring-and-context-assembly.md) | Deterministic, replaceable scoring; context assembly as a pure package | Accepted |
 | [0018](0018-reasoning-and-orchestration.md) | The reasoning port, the Bedrock adapter, and the core orchestrator | Accepted (amends 0007 rule 1) |
 | [0019](0019-experiment-engine-and-verification.md) | Experiment Engine and Verification Sandbox | Accepted |
+| [0020](0020-agent-protocol-and-runtime.md) | The agent protocol, the agent runtime, and how an agent's work rejoins the core | Accepted (amends 0001 dependency table) |
 
 ## Statuses
 

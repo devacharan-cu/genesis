@@ -126,7 +126,7 @@ failing.
 | **P3** | Inquiry: question engine, scoring, context assembly | 🟢 Done: questions as ledger records with ANSWER / REJECT_ASSUMPTION / ACCEPT_RISK responses; deterministic, replaceable question scorer; context assembly with mandatory inclusions, split-on-overflow and recorded manifests. The web interface is specified (ADR-0015), not built |
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | 🟢 Done: the port with typed failures, the deterministic mock, the Bedrock Converse adapter (unit-tested; live suite not yet run), and the core orchestrator — recorded context, recorded calls, proposals through the deciders, `SPLIT_REQUIRED` handling, and the graph mirror (ADR-0018) |
 | **P5** | Experiments, sandbox, verification engine | 🟢 Done: Experiment engine, secure sandbox port, local sandbox adapter with timeout and abort handling, deterministic verification engine state machine, event recording for evidence (ADR-0019) |
-| **P6** | Agents (proposal-based) | ⬜ |
+| **P6** | Agents (proposal-based) | 🟢 Done: the typed agent protocol (nine message kinds, strict bodies, an agent manifest that can only narrow), the task state machine, the agent registry, four roles (Planner, Architect, Researcher, and a deterministic Verifier), and the agent runtime — assignment, bounded dispatch, typed failure with self-model signatures, bounded retry, verification handoff and a replayable task projection. Agents hold no store and no provider, which `check-boundaries.mjs` enforces (ADR-0020). Parallel agents are deliberately not taken |
 | **P7** | Software factory and self-repair loop | ⬜ |
 | **P8** | AWS deployment | ⬜ |
 

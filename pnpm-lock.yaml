@@ -77,6 +77,22 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
+  packages/agents:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/cognition:
     dependencies:
       '@genesis/core-types':
@@ -123,6 +139,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@genesis/agents':
+        specifier: workspace:*
+        version: link:../agents
       '@genesis/cognition':
         specifier: workspace:*
         version: link:../cognition
@@ -144,6 +163,9 @@ importers:
       '@genesis/projections':
         specifier: workspace:*
         version: link:../projections
+      '@genesis/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@genesis/reasoning':
         specifier: workspace:*
         version: link:../reasoning
@@ -154,6 +176,9 @@ importers:
       '@genesis/testkit':
         specifier: workspace:*
         version: link:../testkit
+      '@genesis/verification':
+        specifier: workspace:*
+        version: link:../verification
 
   packages/core-types:
     dependencies:
@@ -236,6 +261,15 @@ importers:
       '@genesis/testkit':
         specifier: workspace:*
         version: link:../testkit
+
+  packages/protocol:
+    dependencies:
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
 
   packages/reasoning:
     dependencies:

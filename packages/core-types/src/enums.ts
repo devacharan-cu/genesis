@@ -149,6 +149,59 @@ export const EDGE_TYPES = [
 ] as const;
 export type EdgeType = (typeof EDGE_TYPES)[number];
 
+/**
+ * SPEC-04 §2. The roster, in the order the spec lists it. A role exists here
+ * once its mandate is defined, which is before its implementation lands.
+ */
+export const AGENT_ROLES = [
+  'PLANNER',
+  'ARCHITECT',
+  'RESEARCHER',
+  'BUILDER',
+  'QA',
+  'SECURITY',
+  'VERIFIER',
+  'REPAIR',
+  'DEPLOYMENT',
+] as const;
+export type AgentRole = (typeof AGENT_ROLES)[number];
+
+/** SPEC-04 §3.1, ADR-0020. The whole protocol; there is no free-form channel. */
+export const MESSAGE_KINDS = [
+  'TASK_ASSIGNMENT',
+  'PROPOSAL',
+  'FINDING',
+  'QUESTION',
+  'EVIDENCE_SUBMISSION',
+  'STATUS',
+  'RESULT',
+  'ERROR',
+  'CANCEL',
+] as const;
+export type MessageKind = (typeof MESSAGE_KINDS)[number];
+
+/**
+ * ADR-0020 §6. Where a task is, not what it is doing: the steps of a run are
+ * the orchestrator's events. `COMPLETED`, `FAILED` and `CANCELLED` are
+ * terminal; `BLOCKED` is not.
+ */
+export const AGENT_TASK_STATES = [
+  'ASSIGNED',
+  'RUNNING',
+  'BLOCKED',
+  'AWAITING_VERIFICATION',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+] as const;
+export type AgentTaskState = (typeof AGENT_TASK_STATES)[number];
+
+/** The states from which a task can still move. Terminal is terminal. */
+export const TERMINAL_AGENT_TASK_STATES: readonly AgentTaskState[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
+
+export const isTerminalAgentTaskState = (state: AgentTaskState): boolean =>
+  TERMINAL_AGENT_TASK_STATES.includes(state);
+
 export const COGNITIVE_LOOP_PHASES = [
   'OBSERVE',
   'UPDATE_WORLD_MODEL',
@@ -186,5 +239,8 @@ export const CANONICAL_ENUMS = {
   HumanResponseKind: HUMAN_RESPONSE_KINDS,
   NodeType: NODE_TYPES,
   EdgeType: EDGE_TYPES,
+  AgentRole: AGENT_ROLES,
+  MessageKind: MESSAGE_KINDS,
+  AgentTaskState: AGENT_TASK_STATES,
   CognitiveLoopPhase: COGNITIVE_LOOP_PHASES,
 } as const satisfies Record<string, readonly string[]>;

@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@genesis/agents": "workspace:*",
     "@genesis/cognition": "workspace:*",
     "@genesis/context": "workspace:*",
     "@genesis/core-types": "workspace:*",
@@ -15,10 +16,12 @@
     "@genesis/ledger": "workspace:*",
     "@genesis/memory": "workspace:*",
     "@genesis/projections": "workspace:*",
+    "@genesis/protocol": "workspace:*",
     "@genesis/reasoning": "workspace:*",
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "@genesis/testkit": "workspace:*"
+    "@genesis/testkit": "workspace:*",
+    "@genesis/verification": "workspace:*"
   }
 }

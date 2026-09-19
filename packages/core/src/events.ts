@@ -103,7 +103,8 @@ export type ProposalRejection = (typeof PROPOSAL_REJECTIONS)[number];
 
 export const ProposalEvaluatedPayload = z
   .object({
-    callId: Id,
+    /** Null for a proposal made without a reasoning call, by a deterministic agent. */
+    callId: Id.nullable(),
     index: z.number().int().nonnegative(),
     /** The kind the output named, when it named a string at all. */
     kind: z.string().nullable(),

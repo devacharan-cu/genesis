@@ -57,6 +57,13 @@ describe('construction and input', () => {
     expect(() => orchestrator(new MockReasoningProvider([]), { actor: { kind: 'HUMAN', id: 'dev' } })).toThrow(ValidationError);
   });
 
+  it('refuses to propose as a person: an agent cannot become one', async () => {
+    await seedGoal(engine, scope);
+    const run = orchestrator(new MockReasoningProvider([])).run(scope, TASK, { actor: { kind: 'HUMAN', id: 'dev' } });
+    await expect(run).rejects.toThrow(/never as a person/);
+    await expect(run).rejects.toThrow(ValidationError);
+  });
+
   it('refuses an invalid task before writing anything', async () => {
     await expect(orchestrator(new MockReasoningProvider([])).run(scope, { ...TASK, budgetTokens: 0 })).rejects.toThrow(/invalid task/);
     await expect(orchestrator(new MockReasoningProvider([])).run(scope, { ...TASK, extra: 1 } as never)).rejects.toThrow(ValidationError);

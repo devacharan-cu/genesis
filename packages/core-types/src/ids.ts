@@ -36,6 +36,8 @@ export const ID_PREFIXES = {
   ReasoningCallId: 'rsn',
   ExperimentId: 'exp',
   ObservationId: 'obs',
+  MessageId: 'msg',
+  TaskId: 'task',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -91,6 +93,14 @@ export type ExperimentId = z.infer<typeof ExperimentId>;
 export const ObservationId = idSchema(ID_PREFIXES.ObservationId).brand<'ObservationId'>();
 export type ObservationId = z.infer<typeof ObservationId>;
 
+/** One protocol envelope (SPEC-04 §3). Handlers are idempotent on it. */
+export const MessageId = idSchema(ID_PREFIXES.MessageId).brand<'MessageId'>();
+export type MessageId = z.infer<typeof MessageId>;
+
+/** One unit of work assigned to one agent. Survives its own retries (ADR-0020 §7). */
+export const TaskId = idSchema(ID_PREFIXES.TaskId).brand<'TaskId'>();
+export type TaskId = z.infer<typeof TaskId>;
+
 /** Generates a new id of the given kind. */
 function mint(kind: IdKind): string {
   return `${ID_PREFIXES[kind]}_${ulid()}`;
@@ -114,6 +124,8 @@ export const newQuestionId = (): QuestionId => QuestionId.parse(mint('QuestionId
 export const newReasoningCallId = (): ReasoningCallId => ReasoningCallId.parse(mint('ReasoningCallId'));
 export const newExperimentId = (): ExperimentId => ExperimentId.parse(mint('ExperimentId'));
 export const newObservationId = (): ObservationId => ObservationId.parse(mint('ObservationId'));
+export const newMessageId = (): MessageId => MessageId.parse(mint('MessageId'));
+export const newTaskId = (): TaskId => TaskId.parse(mint('TaskId'));
 
 /** A lowercase hex SHA-256 digest. */
 export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/, {

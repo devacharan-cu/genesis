@@ -22,7 +22,7 @@
  * appends are fully determined.
  */
 
-import { checkContribution, type CognitiveEngine } from '@genesis/cognition';
+import { type CognitiveEngine } from '@genesis/cognition';
 import {
   type AssemblyOptions,
   assembleContext,
@@ -33,7 +33,6 @@ import {
 } from '@genesis/context';
 import {
   AUTHORITY_LEVELS,
-  CognitiveRuleViolationError,
   type EventActor,
   type JsonValue,
   newCycleId,
@@ -59,9 +58,10 @@ import {
   ReasoningResult,
 } from '@genesis/reasoning';
 import { z } from 'zod';
+import { evaluateProposal, type Proposer } from './evaluate.js';
 import { ORCHESTRATION_EVENTS, type OrchestrationEventType, type ProposalEvaluated } from './events.js';
 import { GraphMirror, type MirrorReport } from './mirror.js';
-import { checkEnvelope, checkProposal, toCommand } from './proposals.js';
+import { checkEnvelope } from './proposals.js';
 import { buildReasoningRequest, requestHash, responseHash } from './request.js';
 import { type RunsState, runsProjector } from './runs.js';
 
@@ -157,8 +157,15 @@ export class Orchestrator {
     this.#mirror = new GraphMirror(options.graph, { now: () => new Date(this.#now()) });
   }
 
-  /** Runs one task. Resolves with its outcome; rejects only when the stores themselves fail. */
-  run(scope: ProjectScope, task: TaskInput): Promise<RunResult> {
+  /**
+   * Runs one task. Resolves with its outcome; rejects only when the stores
+   * themselves fail.
+   *
+   * `proposer` is how an agent's run records its proposals as that agent's,
+   * under that agent's declared kinds (ADR-0020 §2). Omitted, it is the
+   * reasoner, which is exactly what P4 shipped.
+   */
+  run(scope: ProjectScope, task: TaskInput, proposer?: Proposer): Promise<RunResult> {
     const parsed = TaskInput.safeParse(task);
     if (!parsed.success) {
       return Promise.reject(
@@ -167,7 +174,13 @@ export class Orchestrator {
         }),
       );
     }
-    return this.#serialise(scope.projectId, () => this.#run(scope, parsed.data));
+    const acting: Proposer = proposer ?? { actor: this.#reasoner };
+    if (acting.actor.kind === 'HUMAN') {
+      return Promise.reject(
+        new ValidationError('a run proposes as an agent or the system, never as a person', { actor: acting.actor.id }),
+      );
+    }
+    return this.#serialise(scope.projectId, () => this.#run(scope, parsed.data, acting));
   }
 
   /** Reconciles the graph with the committed cognitive state, outside a run (ADR-0016). */
@@ -185,7 +198,7 @@ export class Orchestrator {
     });
   }
 
-  async #run(scope: ProjectScope, task: z.output<typeof TaskInput>): Promise<RunResult> {
+  async #run(scope: ProjectScope, task: z.output<typeof TaskInput>, proposer: Proposer): Promise<RunResult> {
     const cycleId = this.#ids.cycle();
     const record = (type: OrchestrationEventType, payload: JsonValue) =>
       this.#o.ledger.append(scope, {
@@ -292,7 +305,7 @@ export class Orchestrator {
     // 5. Each proposal on its own merits (SPEC-04 §4.3).
     const proposals: ProposalEvaluated[] = [];
     for (const [index, item] of envelope.items.entries()) {
-      const evaluated = await this.#evaluate(scope, cycleId, callId, index, item);
+      const evaluated = await this.#evaluate(scope, proposer, cycleId, callId, index, item);
       await record(ORCHESTRATION_EVENTS.PROPOSAL_EVALUATED, evaluated);
       proposals.push(evaluated);
     }
@@ -304,37 +317,13 @@ export class Orchestrator {
 
   async #evaluate(
     scope: ProjectScope,
+    proposer: Proposer,
     cycleId: string,
     callId: string,
     index: number,
     item: unknown,
   ): Promise<ProposalEvaluated> {
-    const base = { callId, index, rule: null, eventSeqs: [] as number[] };
-    const check = checkProposal(item);
-    if (!check.ok) {
-      return { ...base, kind: check.kind, outcome: 'REJECTED', reason: check.reason, detail: check.issues.join('; ') };
-    }
-    const { proposal } = check;
-    const { state } = await this.#o.engine.state(scope);
-    const drift = checkContribution(state, proposal.contributesTo);
-    if (drift.drift) {
-      const unknown = drift.unknownGoals.length === 0 ? '' : ` (unknown: ${drift.unknownGoals.join(', ')})`;
-      return { ...base, kind: proposal.kind, outcome: 'REJECTED', reason: 'GOAL_DRIFT', detail: `${drift.reason}${unknown}` };
-    }
-    try {
-      const { events } = await this.#o.engine.execute(scope, this.#reasoner, toCommand(proposal, callId), { cycleId });
-      return { ...base, kind: proposal.kind, outcome: 'ACCEPTED', reason: null, detail: null, eventSeqs: events.map((e) => e.seq) };
-    } catch (error) {
-      if (!(error instanceof CognitiveRuleViolationError)) throw error;
-      return {
-        ...base,
-        kind: proposal.kind,
-        outcome: 'REJECTED',
-        reason: 'RULE_VIOLATION',
-        rule: error.rule,
-        detail: error.message,
-      };
-    }
+    return evaluateProposal({ engine: this.#o.engine, scope, proposer, cycleId, callId, index, item });
   }
 
   /**

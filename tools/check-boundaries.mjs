@@ -54,7 +54,10 @@ const PACKAGES_DIR = join(ROOT, 'packages');
  */
 const ALLOWED_WORKSPACE_DEPS = {
   'core-types': [],
-  protocol: [],
+  // The wire: envelopes, message bodies, the roster, the manifest. It may name
+  // the shared vocabulary and nothing else, so it cannot write anything
+  // (ADR-0020 §1, amending this table's original `protocol: []`).
+  protocol: ['core-types'],
   ledger: ['core-types'],
   memory: ['core-types'],
   graph: ['core-types'],
@@ -79,6 +82,9 @@ const ALLOWED_WORKSPACE_DEPS = {
   core: [
       'core-types',
       'protocol',
+      // The runtime dispatches agents, so it names them. The direction is what
+      // matters: core depends on agents, never the reverse (ADR-0020 §2).
+      'agents',
       'ledger',
       'memory',
       'graph',
@@ -91,7 +97,11 @@ const ALLOWED_WORKSPACE_DEPS = {
       'verification',
     ],
   testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections', 'cognition', 'reasoning', 'sandbox', 'core'],
-  // Agents get the protocol and the types. No stores, no core, no adapters.
+  // Agents get the protocol and the types. No stores, no ledger, no cognition,
+  // no reasoning provider, no core, no adapters. That is what makes "an agent
+  // cannot mutate canonical state" a property of this graph rather than a
+  // promise, and it is also why no model-specific behaviour can live in an
+  // agent: an agent has nothing to call (ADR-0020 §1-2).
   agents: ['core-types', 'protocol', 'testkit'],
 };
 

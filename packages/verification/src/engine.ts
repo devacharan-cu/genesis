@@ -22,9 +22,8 @@ export class VerificationEngine {
     const successful = relevant.filter(e => e.exitCode === 0);
 
     for (const ev of successful) {
-      // STATIC_CHECKED requires basic execution success for static tools. We assume
-      // if it has no testKind, or a static check specific kind, it applies.
-      // But let's look for test kinds.
+      // Evidence with no test kind is a static check: a compile, a lint, a
+      // type pass. It says the artifact holds together, and nothing more.
       if (!ev.testKind) {
         hasStatic = true;
       }
@@ -71,8 +70,9 @@ export class VerificationEngine {
       if (!fail.testKind) hasStatic = false;
     }
 
-    // Determine highest state (must satisfy all prerequisites below it, though SPEC-05 says "all must hold")
-    // Wait, SPEC-05 says: "The highest state still supported by non-contradicted evidence".
+    // SPEC-05 §2: the highest state still supported by non-contradicted
+    // evidence. Absence of evidence is not evidence, so the ladder bottoms out
+    // at GENERATED rather than at anything that sounds checked.
     if (hasProd) return 'PRODUCTION_VERIFIED';
     if (hasDeploy) return 'DEPLOYED';
     if (hasE2E) return 'E2E_TESTED';

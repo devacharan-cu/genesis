@@ -1,0 +1,14 @@
+{
+  "name": "@genesis/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The agent wire: the message envelope, the nine message bodies, the agent roster and manifest, and the task state machine (SPEC-04, ADR-0020). Schemas and pure functions; it can write nothing.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*",
+    "zod": "3.25.76"
+  }
+}

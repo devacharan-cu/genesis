@@ -66,6 +66,14 @@ const SAFETY_CRITICAL = [
   'packages/adapters-sandbox-local/src/local.ts', // sandbox teardown, timeout cleanup
   'packages/verification/src/engine.ts', // deterministic verification engine state machine
   'packages/experiment/src/engine.ts', // experiment engine records evidence
+  'packages/protocol/src/envelope.ts', // everything an agent says arrives here (ADR-0020 §5)
+  'packages/protocol/src/manifest.ts', // a manifest can narrow, never widen (ADR-0020 §3)
+  'packages/protocol/src/lifecycle.ts', // terminal is terminal (ADR-0020 §6)
+  'packages/agents/src/contract.ts', // what an agent is handed, and what it may return
+  'packages/agents/src/registry.ts', // registration is where an over-reaching manifest stops
+  'packages/core/src/agent-events.ts', // an agent task's record on the ledger
+  'packages/core/src/agent-runtime.ts', // assignment -> orchestrator -> outcome, all recorded
+  'packages/core/src/agent-tasks.ts', // failed and abandoned agent tasks visible from the ledger
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -76,6 +84,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@genesis/core-types': pkg('core-types'),
+      '@genesis/protocol': pkg('protocol'),
       '@genesis/ledger': pkg('ledger'),
       '@genesis/memory': pkg('memory'),
       '@genesis/graph': pkg('graph'),
@@ -90,6 +99,7 @@ export default defineConfig({
       '@genesis/core': pkg('core'),
       '@genesis/adapters-aws': pkg('adapters-aws'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
+      '@genesis/agents': pkg('agents'),
       '@genesis/testkit': pkg('testkit'),
     },
   },
