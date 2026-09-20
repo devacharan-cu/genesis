@@ -377,8 +377,8 @@ describe('transactions', () => {
       put(item('p', 'a', { n: 2 }), 'n = :v', { ':v': 1 }),
       put(item('p', 'c', { n: 1 }), 'attribute_not_exists(pk)')
     ]);
-    expect((await store.get('t', { key: { pk: 'p', sk: 'a' } }))?.n).toBe(2);
-    expect((await store.get('t', { key: { pk: 'p', sk: 'c' } }))?.n).toBe(1);
+    expect((await store.get('t', { key: { pk: 'p', sk: 'a' } }))?.['n']).toBe(2);
+    expect((await store.get('t', { key: { pk: 'p', sk: 'c' } }))?.['n']).toBe(1);
   });
 
   it('applies nothing when one condition fails', async () => {
@@ -500,7 +500,7 @@ describe('the test hooks and closing', () => {
     // put item with n=2 but the condition is checked against the existing item (n=1)
     // Wait, if n=1, then n > 0 holds!
     await store.put('t', { item: item('p', 'a', { n: 2 }), condition: 'n > :v', values: { ':v': 0 } });
-    expect((await store.get('t', { key: { pk: 'p', sk: 'a' } }))?.n).toBe(2);
+    expect((await store.get('t', { key: { pk: 'p', sk: 'a' } }))?.['n']).toBe(2);
   });
 
   it('evaluates false for binary operators when the attribute is missing', async () => {
@@ -520,7 +520,7 @@ describe('the test hooks and closing', () => {
   it('evaluates true for attribute_not_exists when the attribute is missing on an existing item', async () => {
     const store = await seed([item('p', 'a')]);
     await store.put('t', { item: item('p', 'a', { n: 1 }), condition: 'attribute_not_exists(n)' });
-    expect((await store.get('t', { key: { pk: 'p', sk: 'a' } }))?.n).toBe(1);
+    expect((await store.get('t', { key: { pk: 'p', sk: 'a' } }))?.['n']).toBe(1);
   });
 
   it('evaluates false for BETWEEN when the attribute is missing', async () => {

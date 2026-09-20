@@ -38,6 +38,9 @@ listed downsides has not been thought through.
 | [0021](0021-impact-leases-and-serialised-factory-work.md) | Impact leases, and why factory work stays serialised | Accepted |
 | [0022](0022-reasoning-purposes-not-prompts.md) | Purposes, not prompts: how a role varies what it asks for | Accepted (amends 0018 §3) |
 | [0023](0023-software-factory-and-the-verified-artifact.md) | The software factory, and what a verified artifact is | Accepted |
+| [0024](0024-dynamodb-single-table-and-cloud-persistence.md) | DynamoDB Single-Table and Cloud Persistence | Accepted |
+| [0025](0025-cloud-runtime-and-what-is-not-adopted.md) | Cloud runtime and what is not adopted | Accepted |
+| [0026](0026-infrastructure-as-typed-code-and-platform-ports.md) | Infrastructure as typed code and platform ports | Accepted |
 
 ## Statuses
 
