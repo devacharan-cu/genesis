@@ -187,30 +187,7 @@ export default function App(): React.ReactElement {
                 <NetworkScene state={state} selected={laneFilter} onSelect={setLaneFilter} />
               </Suspense>
             </SceneBoundary>
-            <div className="flex items-center gap-3">
-              <Brain className="w-8 h-8 text-green-400" />
-              <h1 className="text-2xl font-bold tracking-widest text-green-400">GENESIS</h1>
-            </div>
-            <button 
-              onClick={startDemo} 
-              disabled={isRunning || status === 'Connection Error'}
-              className="flex items-center gap-2 bg-green-500/20 hover:bg-green-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-green-400 px-4 py-2 rounded-lg transition-colors border border-green-500/30"
-            >
-              {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {isRunning ? 'RUNNING...' : 'START DEMO'}
-            </button>
           </section>
-
-          <div className="mb-6 flex flex-col gap-2">
-            <label className="text-xs text-gray-400 uppercase tracking-widest">Project Intent</label>
-            <textarea
-              value={intent}
-              onChange={(e) => setIntent(e.target.value)}
-              disabled={isRunning}
-              className="w-full bg-black/50 border border-gray-700 rounded p-2 text-sm text-gray-300 focus:outline-none focus:border-green-500/50 resize-none"
-              rows={2}
-            />
-          </div>
 
           <div className="xl:hidden">
             <ArtifactPanel state={state} />
