@@ -8,20 +8,7 @@ function SystemNode({ position, color, label, active, onClick }: { position: [nu
   const [hovered, setHovered] = useState(false);
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={active ? 2 : 0.5}>
-      <mesh position={position} onClick={onClick}>
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial 
-          color={color} 
-          emissive={color} 
-          emissiveIntensity={active ? 2 : 0.5} 
-          wireframe={!active}
-          transparent
-          opacity={0.8}
-        />
-        <Text position={[0, -1.5, 0]} fontSize={0.4} color="white" anchorX="center" anchorY="middle">
-          {label}
-        </Text>
-      </mesh>
+
       <group position={position} onClick={(e) => { e.stopPropagation(); onClick?.(); }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
         <mesh scale={hovered || active ? 1.2 : 1}>
           <sphereGeometry args={[1, 32, 32]} />
@@ -90,7 +77,6 @@ export default function App() {
     if (isRunning) return;
     setIsRunning(true);
     setEvents([]);
-    await fetch('http://localhost:3001/start', { method: 'POST' });
     setStatus('Starting...');
     try {
       const res = await fetch('http://127.0.0.1:3001/start', { method: 'POST' });
@@ -106,6 +92,8 @@ export default function App() {
   const filteredEvents = selectedNode 
     ? events.filter(e => e.node === selectedNode || e.node === selectedNode.toLowerCase())
     : events;
+
+  const displayEvents = filteredEvents.slice(-50);
 
   return (
     <div className="w-full h-screen bg-black text-white flex overflow-hidden font-mono">
@@ -142,7 +130,7 @@ export default function App() {
           <h2 className="text-sm text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" /> Live Event Stream {selectedNode ? `(Filtered)` : ''}
           </h2>
-          {filteredEvents.map((ev, i) => (
+          {displayEvents.map((ev, i) => (
             <div key={i} className="p-3 border border-gray-800 rounded-lg bg-gray-900/50 flex gap-3 items-start animate-in fade-in slide-in-from-left-4">
               <Terminal className="w-4 h-4 mt-1 text-green-500 shrink-0" />
               <div>
@@ -151,7 +139,7 @@ export default function App() {
               </div>
             </div>
           ))}
-          {filteredEvents.length === 0 && <p className="text-gray-500 text-sm italic">No events yet...</p>}
+          {events.length === 0 && <p className="text-gray-500 text-sm italic">No events yet...</p>}
         </div>
       </div>
 
