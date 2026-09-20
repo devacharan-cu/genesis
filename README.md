@@ -22,7 +22,14 @@ and uses it to build, test, repair, verify, deploy and maintain software.
 > the cognitive deciders — with `SPLIT_REQUIRED` stopping a run before any call,
 > every provider failure typed and recorded, and the graph **mirrored from the
 > committed cognitive state** and proven rebuildable from the ledger. Every port
-> has an in-memory and a SQLite adapter running one shared conformance suite.
+> has an in-memory and a SQLite adapter running one shared conformance suite. P7 turns the runtime into a **software factory**: intent in,
+verified artifact out, through plan, architecture, build, test, security review
+and verification, with a bounded repair loop that re-enters at test rather than
+at verify. A role varies its model call by naming a purpose from a closed set;
+the core owns every prompt and schema, so no wording lives in a domain package.
+The factory runs the sandbox and QA reports what it observed, because an agent
+cannot reach one. "Verified" means the P5 engine said so from evidence, and the
+record that says it is a projection anyone can rebuild from the ledger.
 >
 > What is **not** built: the full cognitive loop (planning, acting, verifying),
 > task splitting, the web question interface and its authentication,
@@ -127,7 +134,7 @@ failing.
 | **P4** | `ReasoningProvider` port, mock and Bedrock adapters | 🟢 Done: the port with typed failures, the deterministic mock, the Bedrock Converse adapter (unit-tested; live suite not yet run), and the core orchestrator — recorded context, recorded calls, proposals through the deciders, `SPLIT_REQUIRED` handling, and the graph mirror (ADR-0018) |
 | **P5** | Experiments, sandbox, verification engine | 🟢 Done: Experiment engine, secure sandbox port, local sandbox adapter with timeout and abort handling, deterministic verification engine state machine, event recording for evidence (ADR-0019) |
 | **P6** | Agents (proposal-based) | 🟢 Done: the typed agent protocol (nine message kinds, strict bodies, an agent manifest that can only narrow), the task state machine, the agent registry, four roles (Planner, Architect, Researcher, and a deterministic Verifier), and the agent runtime — assignment, bounded dispatch, typed failure with self-model signatures, bounded retry, verification handoff and a replayable task projection. Agents hold no store and no provider, which `check-boundaries.mjs` enforces (ADR-0020). Parallel agents are deliberately not taken |
-| **P7** | Software factory and self-repair loop | ⬜ |
+| **P7** | Software factory and self-repair loop | 🟢 Done: reasoning purposes so a role varies what it asks for without any wording leaving the core, the artifact door recording produced files at `GENERATED`, the Builder, QA, Security and Repair roles, impact leases with staleness detection, the eight-stage factory pipeline with a bounded repair loop, and the verified-artifact projection whose state comes from the P5 engine and nowhere else (ADR-0021, ADR-0022, ADR-0023). Security review is a pattern-based reviewer over artifact text and says so |
 | **P8** | AWS deployment | ⬜ |
 
 Full phase definitions and exit criteria:

@@ -35,6 +35,9 @@ listed downsides has not been thought through.
 | [0018](0018-reasoning-and-orchestration.md) | The reasoning port, the Bedrock adapter, and the core orchestrator | Accepted (amends 0007 rule 1) |
 | [0019](0019-experiment-engine-and-verification.md) | Experiment Engine and Verification Sandbox | Accepted |
 | [0020](0020-agent-protocol-and-runtime.md) | The agent protocol, the agent runtime, and how an agent's work rejoins the core | Accepted (amends 0001 dependency table) |
+| [0021](0021-impact-leases-and-serialised-factory-work.md) | Impact leases, and why factory work stays serialised | Accepted |
+| [0022](0022-reasoning-purposes-not-prompts.md) | Purposes, not prompts: how a role varies what it asks for | Accepted (amends 0018 §3) |
+| [0023](0023-software-factory-and-the-verified-artifact.md) | The software factory, and what a verified artifact is | Accepted |
 
 ## Statuses
 

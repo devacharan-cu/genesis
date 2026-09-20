@@ -12,11 +12,11 @@
  * would hide in.
  */
 
-import type { Authority } from '@genesis/core-types';
+import type { Authority, ReasoningPurpose } from '@genesis/core-types';
 import type { ContextCandidate } from '@genesis/context';
 import { canonicalJson, sha256Hex } from '@genesis/ledger';
 import type { ContextBlock, ReasoningRequest, UntrustedBlock } from '@genesis/reasoning';
-import { PROPOSAL_OUTPUT_SCHEMA } from './proposals.js';
+import { contractFor } from './purposes.js';
 
 const UNTRUSTED_AUTHORITIES: ReadonlySet<Authority> = new Set<Authority>(['AI_ASSUMPTION', 'UNGROUNDED']);
 
@@ -40,7 +40,9 @@ export function buildReasoningRequest(
   taskText: string,
   items: readonly ContextCandidate[],
   budget: ReasoningBudget,
+  purpose: ReasoningPurpose = 'PROPOSE_COGNITIVE_UPDATES',
 ): ReasoningRequest {
+  const contract = contractFor(purpose);
   const context: ContextBlock[] = items
     .filter((c) => !UNTRUSTED_AUTHORITIES.has(c.authority))
     .map((c) => ({ id: c.id, kind: c.kind, authority: c.authority, text: c.text }));
@@ -49,12 +51,12 @@ export function buildReasoningRequest(
     .map((c) => ({ source: `${c.id} (${c.kind}, ${c.authority})`, text: c.text }));
   return {
     callId,
-    purpose: 'PROPOSE_COGNITIVE_UPDATES',
-    system: SYSTEM_PROMPT,
+    purpose,
+    system: contract.system,
     task: taskText,
     context,
     untrustedContent,
-    outputSchema: PROPOSAL_OUTPUT_SCHEMA,
+    outputSchema: contract.outputSchema,
     budget: { maxOutputTokens: budget.maxOutputTokens, timeoutMs: budget.timeoutMs },
   };
 }

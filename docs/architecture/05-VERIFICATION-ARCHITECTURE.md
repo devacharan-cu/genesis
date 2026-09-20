@@ -201,6 +201,45 @@ the DynamoDB/Neptune adapter are proven interchangeable
 
 ---
 
+## 5a. The verified artifact record
+
+P7 answers "is it done" with a projection over the ledger, not a record anyone
+writes ([ADR-0023](../adr/0023-software-factory-and-the-verified-artifact.md)
+§5). There is no `verified` flag for a component to set, because there is no
+field for one.
+
+```
+VERIFIED_ARTIFACT
+  artifactId, projectId            identity and isolation
+  contentHash, bytes               the exact bytes verified
+  proposedBy, proposedSeq          provenance back to the work that produced it
+  state            VerificationState   from the P5 engine, from evidence
+  evidence         [{ observationId, environment, exitCode, testKind, raw, seq }]
+  security         { reviewed, findings, blocking }
+  verifiedAt       string | null       null unless the state is above GENERATED
+  events           [seq]               every event that justifies the above
+```
+
+Four rules make it non-fakeable, and each is tested:
+
+1. **The state comes from the engine.** The projection collects evidence; the
+   factory asks the P5 engine and records what it returns. Nothing computes a
+   state itself, so there is no second verification truth model.
+2. **`GENERATED` is the default and the honest answer.** Collecting evidence
+   advances nothing by itself — only a recorded ruling moves the state.
+3. **A content hash change restarts verification.** Artifact identity is derived
+   from path and content hash, so different bytes are a different artifact at
+   `GENERATED`. Nothing is inherited (§2).
+4. **Blocking security findings hold an artifact down.** A change stopped before
+   `VERIFY` leaves its artifacts wherever their evidence put them.
+
+Coverage attribution is asked of the engine in the terms a coverage report
+actually uses — the artifact's path — because a runner prints paths, not
+synthetic ids. The ruling is recorded against the artifact version that earned
+it.
+
+---
+
 ## 6. What the system reports
 
 The status surface reports, per artifact and per requirement:

@@ -38,6 +38,8 @@ export const ID_PREFIXES = {
   ObservationId: 'obs',
   MessageId: 'msg',
   TaskId: 'task',
+  ArtifactId: 'art',
+  FactoryRunId: 'run',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -101,6 +103,14 @@ export type MessageId = z.infer<typeof MessageId>;
 export const TaskId = idSchema(ID_PREFIXES.TaskId).brand<'TaskId'>();
 export type TaskId = z.infer<typeof TaskId>;
 
+/** One artifact version. A change of contents is a different artifact (SPEC-05 §2). */
+export const ArtifactId = idSchema(ID_PREFIXES.ArtifactId).brand<'ArtifactId'>();
+export type ArtifactId = z.infer<typeof ArtifactId>;
+
+/** One pass of the factory pipeline over one change (ADR-0023). */
+export const FactoryRunId = idSchema(ID_PREFIXES.FactoryRunId).brand<'FactoryRunId'>();
+export type FactoryRunId = z.infer<typeof FactoryRunId>;
+
 /** Generates a new id of the given kind. */
 function mint(kind: IdKind): string {
   return `${ID_PREFIXES[kind]}_${ulid()}`;
@@ -126,6 +136,8 @@ export const newExperimentId = (): ExperimentId => ExperimentId.parse(mint('Expe
 export const newObservationId = (): ObservationId => ObservationId.parse(mint('ObservationId'));
 export const newMessageId = (): MessageId => MessageId.parse(mint('MessageId'));
 export const newTaskId = (): TaskId => TaskId.parse(mint('TaskId'));
+export const newArtifactId = (): ArtifactId => ArtifactId.parse(mint('ArtifactId'));
+export const newFactoryRunId = (): FactoryRunId => FactoryRunId.parse(mint('FactoryRunId'));
 
 /** A lowercase hex SHA-256 digest. */
 export const Sha256Hex = z.string().regex(/^[0-9a-f]{64}$/, {

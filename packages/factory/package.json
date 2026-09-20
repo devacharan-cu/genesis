@@ -1,0 +1,29 @@
+{
+  "name": "@genesis/factory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The software factory: a policy layer over the P6 agent runtime that drives intent to verified artifact (ADR-0023). It decides which stage runs next and routes failures; it never assembles context, calls a provider, appends a cognitive event or decides a verification state.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/adapters-sandbox-local": "workspace:*",
+    "@genesis/agents": "workspace:*",
+    "@genesis/cognition": "workspace:*",
+    "@genesis/core": "workspace:*",
+    "@genesis/core-types": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/protocol": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
+    "@genesis/sandbox": "workspace:*",
+    "@genesis/verification": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

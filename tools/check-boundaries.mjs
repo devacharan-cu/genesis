@@ -103,6 +103,25 @@ const ALLOWED_WORKSPACE_DEPS = {
   // promise, and it is also why no model-specific behaviour can live in an
   // agent: an agent has nothing to call (ADR-0020 §1-2).
   agents: ['core-types', 'protocol', 'testkit'],
+  // The factory drives the runtime; it is a policy layer over the core, not
+  // part of it. The direction is what matters: factory depends on core, never
+  // the reverse, and it reaches no store it could write through (ADR-0023 1).
+  factory: [
+      'core-types',
+      'protocol',
+      'agents',
+      'core',
+      'graph',
+      'ledger',
+      'projections',
+      'sandbox',
+      'adapters-sandbox-local',
+      'verification',
+      'cognition',
+      'memory',
+      'reasoning',
+      'testkit',
+    ],
 };
 
 /** External modules that may only be imported from specific packages. */

@@ -150,3 +150,84 @@ describe('proposal evaluation', () => {
     expect((await o.run(scope, TASK)).status).toBe('COMPLETED');
   });
 });
+
+/**
+ * The purpose table in use (ADR-0022). One call path serves all three, so what
+ * matters is that each is held to its own schema and recorded its own way.
+ */
+describe('purposes other than cognitive proposals', () => {
+  const run = async (purpose: 'PRODUCE_ARTIFACT' | 'DIAGNOSE_FAILURE', output: unknown) => {
+    await seedGoal(engine, scope);
+    const o = orchestrator(new MockReasoningProvider([{ output }] as never));
+    return o.run(scope, { ...TASK, purpose });
+  };
+
+  it('asks for the purpose it was given, and records it', async () => {
+    const result = await run('PRODUCE_ARTIFACT', { artifacts: [{ path: 'a.ts', contents: 'x' }] });
+    expect(result.status).toBe('COMPLETED');
+    const requested = (await ledger.read(scope)).find((e) => e.type === 'REASONING_REQUESTED');
+    expect(requested?.payload).toMatchObject({ purpose: 'PRODUCE_ARTIFACT' });
+  });
+
+  it('records a produced artifact at GENERATED, as the agent', async () => {
+    const result = await run('PRODUCE_ARTIFACT', { artifacts: [{ path: 'a.ts', contents: 'x' }] });
+    const proposed = (await ledger.read(scope)).find((e) => e.type === 'ARTIFACT_PROPOSED');
+    expect(proposed?.payload).toMatchObject({ path: 'a.ts', verificationState: 'GENERATED' });
+    expect(proposed?.authority).toBe('AI_ASSUMPTION');
+    expect(result.produced).toMatchObject({ artifacts: [{ path: 'a.ts' }] });
+    // A non-cognitive run proposes nothing and reconciles no graph: it changed
+    // no cognitive state, and the graph mirrors cognition only (ADR-0016).
+    expect(result.proposals).toEqual([]);
+    expect(result.mirror).toBeNull();
+  });
+
+  it('records a diagnosis as a reading, not as a finding of fact', async () => {
+    const result = await run('DIAGNOSE_FAILURE', {
+      rootCause: 'the operator is wrong',
+      targetArtifacts: ['art_1'],
+      approach: 'use +',
+    });
+    expect(result.status).toBe('COMPLETED');
+    const diagnosed = (await ledger.read(scope)).find((e) => e.type === 'FAILURE_DIAGNOSED');
+    expect(diagnosed?.payload).toMatchObject({ rootCause: 'the operator is wrong', confidence: 0.5 });
+  });
+
+  it('refuses output that does not satisfy the purpose’s schema', async () => {
+    const result = await run('PRODUCE_ARTIFACT', { artifacts: 'not a list' });
+    expect(result.status).toBe('FAILED');
+    expect(result.failure?.kind).toBe('OUTPUT_NOT_AN_ENVELOPE');
+    const rejected = (await ledger.read(scope)).find((e) => e.type === 'REASONING_OUTPUT_REJECTED');
+    expect(rejected?.payload).toMatchObject({ reason: 'NOT_AN_ENVELOPE' });
+    expect((await ledger.read(scope)).some((e) => e.type === 'ARTIFACT_PROPOSED')).toBe(false);
+  });
+
+  it('names the root when the output is not even the right shape', async () => {
+    const result = await run('PRODUCE_ARTIFACT', 'a sentence');
+    expect(result.status).toBe('FAILED');
+    expect(result.failure?.message).toContain('<root>');
+  });
+
+  it('refuses a diagnosis that implicates nothing', async () => {
+    const result = await run('DIAGNOSE_FAILURE', { rootCause: 'x', targetArtifacts: [], approach: 'y' });
+    expect(result.status).toBe('FAILED');
+    expect((await ledger.read(scope)).some((e) => e.type === 'FAILURE_DIAGNOSED')).toBe(false);
+  });
+
+  it('refuses an artifact the door will not take, and records nothing', async () => {
+    const result = await run('PRODUCE_ARTIFACT', { artifacts: [{ path: '../escape.ts', contents: 'x' }] });
+    expect(result.status).toBe('FAILED');
+    expect(result.failure?.kind).toBe('OUTPUT_REFUSED');
+    expect(result.failure?.message).toContain('goes through ..');
+    expect((await ledger.read(scope)).some((e) => e.type === 'ARTIFACT_PROPOSED')).toBe(false);
+  });
+
+  it('holds a produced artifact to the configured ceiling', async () => {
+    await seedGoal(engine, scope);
+    const o = orchestrator(new MockReasoningProvider([{ output: { artifacts: [{ path: 'a.ts', contents: 'xxxxx' }] } }] as never), {
+      artifacts: { maxArtifacts: 5, maxBytes: 2 },
+    });
+    const result = await o.run(scope, { ...TASK, purpose: 'PRODUCE_ARTIFACT' });
+    expect(result.status).toBe('FAILED');
+    expect(result.failure?.message).toContain('over the limit of 2');
+  });
+});

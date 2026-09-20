@@ -1,5 +1,7 @@
 export * from './events.js';
 export * from './proposals.js';
+export * from './purposes.js';
+export * from './artifacts.js';
 export * from './evaluate.js';
 export * from './request.js';
 export * from './mirror.js';

@@ -13,12 +13,15 @@
  * third-party code talking to a third-party service.
  */
 
-import { AUTHORITY_LEVELS, JsonValue } from '@genesis/core-types';
+import { AUTHORITY_LEVELS, JsonValue, REASONING_PURPOSES, type ReasoningPurpose } from '@genesis/core-types';
 import { z } from 'zod';
 
-/** What a call is for. Recorded on every call event (ADR-0007 rule 4). */
-export const REASONING_PURPOSES = ['PROPOSE_COGNITIVE_UPDATES'] as const;
-export type ReasoningPurpose = (typeof REASONING_PURPOSES)[number];
+/**
+ * What a call is for. Recorded on every call event (ADR-0007 rule 4), and
+ * canonical in `core-types` so that `protocol` and `agents` can name a purpose
+ * without depending on this port (ADR-0022 §4).
+ */
+export { REASONING_PURPOSES, type ReasoningPurpose };
 
 /** A piece of assembled context, labelled with where it came from and how established it is. */
 export const ContextBlock = z

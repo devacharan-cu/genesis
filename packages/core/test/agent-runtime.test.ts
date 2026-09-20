@@ -627,6 +627,7 @@ describe('determinism', () => {
       taskId: 'task-1',
       status: 'COMPLETED',
       callId: 'rsn_1',
+      produced: null,
       failure: null,
       proposals: [{ callId: 'rsn_1', index: 0, kind: 'RECORD_BELIEF', outcome: 'ACCEPTED', reason: null, rule: null, detail: null, eventSeqs: [1] }],
       mirror: null,
@@ -753,7 +754,7 @@ describe('an agent that both reasons and proposes on its own', () => {
   /** Frames a run, then also submits a proposal of its own from the summary. */
   class Both extends BaseAgent {
     frame(a: TaskAssignmentBody): TaskFraming {
-      return { kind: 'REPAIR_TASK', text: a.instruction, nodeIds: [], activeGoalId: 'goal-1', budgetTokens: 4000 };
+      return { purpose: 'PROPOSE_COGNITIVE_UPDATES', kind: 'REPAIR_TASK', text: a.instruction, nodeIds: [], activeGoalId: 'goal-1', budgetTokens: 4000 };
     }
     protected override extraMessages(a: TaskAssignmentBody, _s: AgentServices, emit: Emit): readonly Envelope[] {
       return [

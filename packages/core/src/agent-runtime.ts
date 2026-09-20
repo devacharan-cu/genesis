@@ -113,6 +113,8 @@ export interface TaskRequest {
   readonly contributesTo: readonly string[];
   /** Context the core assembled for this agent. Text, never a handle. */
   readonly context?: readonly { id: string; kind: string; authority: JsonValue; text: string }[];
+  /** The role-specific input, validated by the role that reads it. */
+  readonly input?: JsonValue;
   readonly budget?: { readonly maxOutputTokens?: number; readonly timeoutMs?: number };
 }
 
@@ -127,6 +129,12 @@ export interface TaskOutcome {
   readonly messages: readonly Envelope[];
   /** Messages it refused, with why. An agent's mistakes are visible, not dropped. */
   readonly rejected: readonly { readonly kind: string | null; readonly issues: readonly string[] }[];
+  /**
+   * What the task's run produced under a non-cognitive purpose, already checked
+   * and recorded by the core: the artifacts a build landed, or the diagnosis a
+   * repair read. Null when the task framed no run, or framed a cognitive one.
+   */
+  readonly produced: JsonValue | null;
 }
 
 const DEFAULTS = { maxMessagesPerTask: 50, guardMs: 1_000, maxOutputTokens: 2048, timeoutMs: 60_000 };
@@ -185,6 +193,7 @@ export class AgentRuntime {
     const proposals: ProposalEvaluated[] = [];
     const verified: { artifactId: string; state: VerificationState }[] = [];
     let failure: TaskOutcome['failure'] = null;
+    let produced: JsonValue | null = null;
     let attempt = 0;
 
     const record = (type: AgentEventType, payload: JsonValue): Promise<unknown> =>
@@ -220,6 +229,7 @@ export class AgentRuntime {
           timeoutMs: budgetMs,
         },
         deadline: new Date(new Date(this.#now()).getTime() + budgetMs).toISOString(),
+        input: request.input ?? null,
       };
 
       await record(AGENT_EVENTS.AGENT_TASK_ASSIGNED, {
@@ -242,6 +252,7 @@ export class AgentRuntime {
 
       if (attemptResult.failure === null) {
         failure = null;
+        produced = attemptResult.produced;
         for (const item of attemptResult.verified) verified.push(item);
         await moveTo(attemptResult.reached, 'the agent reported its outcome');
         // The engine has ruled on the submitted evidence, so the wait is over.
@@ -292,7 +303,7 @@ export class AgentRuntime {
       proposalsAccepted: proposals.filter((p) => p.outcome === 'ACCEPTED').length,
     });
 
-    return { taskId, state, attempts: attempt, failure, proposals, verified, messages: accepted, rejected };
+    return { taskId, state, attempts: attempt, failure, proposals, verified, messages: accepted, rejected, produced };
   }
 
   /** One attempt: frame, run, dispatch, read what came back. */
@@ -310,6 +321,7 @@ export class AgentRuntime {
     readonly verified: readonly { readonly artifactId: string; readonly state: VerificationState }[];
     readonly reached: AgentTaskState;
     readonly failure: TaskOutcome['failure'] | null;
+    readonly produced: JsonValue | null;
   }> {
     const { manifest, proposalKinds } = registered;
     const fail = (kind: AgentFailureKind, message: string): TaskOutcome['failure'] => ({
@@ -317,7 +329,7 @@ export class AgentRuntime {
       message,
       signature: failureSignature(manifest.role, assignment.kind, kind),
     });
-    const nothing = { accepted: [], rejected: [], proposals: [], verified: [] } as const;
+    const nothing = { accepted: [], rejected: [], proposals: [], verified: [], produced: null } as const;
 
     // 1. Framing: pure, role-specific, and checked. A role that frames nonsense
     //    fails here rather than sending nonsense to a provider.
@@ -424,7 +436,7 @@ export class AgentRuntime {
       }
     }
 
-    return { accepted, rejected, proposals, verified, reached: checked.outcome.reached, failure: null };
+    return { accepted, rejected, proposals, verified, reached: checked.outcome.reached, failure: null, produced: run?.produced ?? null };
   }
 
   /**
@@ -515,6 +527,7 @@ export function summarise(result: RunResult): RunSummary {
     cycleId: result.cycleId,
     callId: result.callId,
     failure: result.failure,
+    produced: result.produced,
     proposals: result.proposals.map((p) => ({
       kind: p.kind,
       accepted: p.outcome === 'ACCEPTED',

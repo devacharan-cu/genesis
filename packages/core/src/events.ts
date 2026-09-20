@@ -26,6 +26,10 @@ export const ORCHESTRATION_EVENTS = {
   PROPOSAL_EVALUATED: 'PROPOSAL_EVALUATED',
   EXECUTION_FAILED: 'EXECUTION_FAILED',
   TASK_FINISHED: 'TASK_FINISHED',
+  /** A model produced a file. It exists; nothing is claimed about it (SPEC-05 2). */
+  ARTIFACT_PROPOSED: 'ARTIFACT_PROPOSED',
+  /** A model's reading of a recorded failure. A reading, not a finding of fact. */
+  FAILURE_DIAGNOSED: 'FAILURE_DIAGNOSED',
 } as const;
 export type OrchestrationEventType = (typeof ORCHESTRATION_EVENTS)[keyof typeof ORCHESTRATION_EVENTS];
 
@@ -122,6 +126,30 @@ export const ProposalEvaluatedPayload = z
   })
   .strict();
 export type ProposalEvaluated = z.infer<typeof ProposalEvaluatedPayload>;
+
+export const ArtifactProposedPayload = z
+  .object({
+    artifactId: Id,
+    path: Id,
+    contentHash: Sha256,
+    bytes: z.number().int().nonnegative(),
+    language: Id,
+    contents: z.string(),
+    callId: Id.nullable(),
+    /** Always GENERATED here. Stated, so a reader of one event needs no rule. */
+    verificationState: z.literal('GENERATED'),
+  })
+  .strict();
+
+export const FailureDiagnosedPayload = z
+  .object({
+    callId: Id,
+    rootCause: z.string().min(1),
+    targetArtifacts: z.array(Id),
+    approach: z.string().min(1),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict();
 
 export const ExecutionFailedPayload = z
   .object({ signature: Id, mitigation: z.string().min(1).nullish() })

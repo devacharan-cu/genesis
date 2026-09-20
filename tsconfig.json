@@ -43,6 +43,7 @@
       "@genesis/adapters-aws": ["packages/adapters-aws/src/index.ts"],
       "@genesis/adapters-sqlite": ["packages/adapters-sqlite/src/index.ts"],
       "@genesis/agents": ["packages/agents/src/index.ts"],
+      "@genesis/factory": ["packages/factory/src/index.ts"],
       "@genesis/testkit": ["packages/testkit/src/index.ts"]
     }
   },

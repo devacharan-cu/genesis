@@ -16,6 +16,7 @@
  *     context or make its own call, because it has nothing to make one with.
  */
 
+import { JsonValue, REASONING_PURPOSES } from '@genesis/core-types';
 import { z } from 'zod';
 
 const Id = z.string().trim().min(1);
@@ -30,6 +31,12 @@ const Id = z.string().trim().min(1);
  */
 export const TaskFraming = z
   .object({
+    /**
+     * What this role is asking a model for (ADR-0022 §1). The core owns the
+     * system prompt, the output schema and the handler for each purpose, so
+     * this is the whole of a role's influence over the shape of its call.
+     */
+    purpose: z.enum(REASONING_PURPOSES).default('PROPOSE_COGNITIVE_UPDATES'),
     /** The task kind, used for the failure signature and for context scoring. */
     kind: Id,
     /** What this run is for, in the agent's own words. */
@@ -74,6 +81,12 @@ export const RunSummary = z
     /** The provider failure or output rejection, when there was one. */
     failure: z.object({ kind: Id, message: z.string() }).strict().nullable(),
     proposals: z.array(ProposalSummary).max(100),
+    /**
+     * What a non-cognitive run produced, by the purpose's own handler: the
+     * artifacts a build recorded, or the diagnosis a repair read. Null for a
+     * cognitive run, whose outcome is entirely in `proposals`.
+     */
+    produced: JsonValue.nullable().default(null),
     context: z
       .object({
         status: z.enum(['ASSEMBLED', 'SPLIT_REQUIRED']),

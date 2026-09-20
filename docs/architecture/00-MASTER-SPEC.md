@@ -402,6 +402,47 @@ FAILED
 CANCELLED
 ```
 
+The factory vocabularies from [`04-AGENT-ARCHITECTURE.md`](04-AGENT-ARCHITECTURE.md)
+§4e and [ADR-0023](../adr/0023-software-factory-and-the-verified-artifact.md).
+
+`ReasoningPurpose` is what a role may ask a model for. It is closed because the
+core owns the system prompt, the output schema and the handler for each one
+([ADR-0022](../adr/0022-reasoning-purposes-not-prompts.md)): a role names a
+purpose and can supply no wording of its own, so no model-specific behaviour can
+reach a domain package.
+
+```canonical:ReasoningPurpose
+PROPOSE_COGNITIVE_UPDATES
+PRODUCE_ARTIFACT
+DIAGNOSE_FAILURE
+```
+
+`FactoryStage` is the pipeline. `DIAGNOSE` and `REPAIR` are entered only from a
+failure, and a repaired change re-enters at `TEST` — never at `VERIFY`, because
+a fix nobody checked is the failure the phase exists to prevent.
+
+```canonical:FactoryStage
+PLAN
+ARCHITECT
+BUILD
+TEST
+SECURITY_REVIEW
+DIAGNOSE
+REPAIR
+VERIFY
+```
+
+`Severity` ranks what a reviewer found, highest first. The order is load-bearing:
+a blocking threshold is a comparison against it.
+
+```canonical:Severity
+CRITICAL
+HIGH
+MEDIUM
+LOW
+INFO
+```
+
 ---
 
 ## 5. Canonical project state
@@ -535,7 +576,7 @@ criteria are met by executed tests, not by inspection.
 | **P4** | Reasoning provider | `ReasoningProvider` port, mock adapter, Bedrock adapter | Core test suite passes with mock adapter only |
 | **P5** | Experiments & verification | Experiment engine, sandbox runner, verification state machine | Experiments produce real observations; no state advances without evidence |
 | **P6** | Agents | Typed agent protocol, manifest and registry, task state machine, agent runtime, first roles (Planner, Architect, Researcher, Verifier) | Agents cannot mutate state except through accepted proposals, enforced by the package graph and proven by a conformance suite; every agent task replays from the ledger |
-| **P7** | Software factory | Intent → requirements → build → test → repair → verify | End-to-end build of a reference project, self-repaired from a real failure |
+| **P7** | Software factory | Purpose contracts, the artifact door, Builder/QA/Security/Repair, impact leases, the factory pipeline and the verified-artifact projection | Intent reaches a verified artifact only on evidence the P5 engine accepted; a failure routes through diagnosis and back through test and review; repair is bounded; every transition replays from the ledger |
 | **P8** | AWS deployment | Adapters for DynamoDB/Neptune/S3, Step Functions orchestration, Cognito | Same core test suite passes against cloud adapters |
 
 Nothing in P7 is implemented before P1–P5 are green. This is a hard rule.

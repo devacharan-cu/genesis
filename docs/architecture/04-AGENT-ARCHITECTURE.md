@@ -48,11 +48,11 @@ a rejected proposal rather than corrupted truth.
 | **Planner** | Decompose an active goal into an ordered plan of tasks with `contributesTo` justification | P6 ✅ |
 | **Architect** | Propose structural decisions, component boundaries, and ADR drafts | P6 ✅ |
 | **Researcher** | Resolve `SEARCH`-strategy uncertainties from project artifacts and permitted external sources | P6 ✅ |
-| **Builder** | Produce code/config artifacts for a specified change | P7 |
-| **QA** | Produce and run tests; report real results | P7 |
-| **Security** | Review proposals against security policy; produce findings | P7 |
+| **Builder** | Produce code/config artifacts for a specified change | P7 ✅ |
+| **QA** | Report what the runner actually did, as evidence | P7 ✅ |
+| **Security** | Review artifact text against deterministic rules; produce findings | P7 ✅ |
 | **Verifier** | Review whether evidence is *adequate* and raise findings (trivial assertions, self-written tests, mocked subjects). The state machine itself is applied by the core's verification engine in P5 — see [SPEC-05](05-VERIFICATION-ARCHITECTURE.md) §3.6 | P6 ✅ (deterministic) |
-| **Repair** | Diagnose a real failure and propose a fix | P7 |
+| **Repair** | Diagnose a real failure and propose a bounded, targeted fix | P7 ✅ |
 | **Deployment** | Propose and execute deployments within policy | P8 |
 
 A tick marks a role that exists. The rest are declared so that policy and
@@ -157,7 +157,29 @@ agent submits what happened; what that justifies is the core's to decide.
   assignment, because assigning yourself work is the first step of deciding what
   you should be doing.
 
-### 3.3 What an agent is handed
+### 3.3 What a role may ask for
+
+A role varies its call by naming a **purpose** from a closed canonical set
+(SPEC-00 §4, `canonical:ReasoningPurpose`). The core owns the system prompt, the
+output schema and the handler for each one
+([ADR-0022](../adr/0022-reasoning-purposes-not-prompts.md)).
+
+| Purpose | Asked for | Recorded as |
+|---|---|---|
+| `PROPOSE_COGNITIVE_UPDATES` | Beliefs, uncertainties, drafted questions, contradictions | The four proposal kinds, through the cognitive deciders |
+| `PRODUCE_ARTIFACT` | Source artifacts: path and contents | `ARTIFACT_PROPOSED`, at `GENERATED` and no further |
+| `DIAGNOSE_FAILURE` | A root-cause reading of a recorded failure | `FAILURE_DIAGNOSED`, as an `AI_ASSUMPTION` |
+
+A role cannot write a prompt, pick a model, choose a schema or add an
+instruction. Where a role needs configurable behaviour it uses a `RoleConfig`:
+bounded numbers and members of closed sets, never text a model sees.
+
+None of the three purposes can produce truth. A conformance test asserts the
+negative directly — no source file under `packages/agents` or
+`packages/protocol` contains a system prompt, a model id or a sampling
+parameter.
+
+### 3.4 What an agent is handed
 
 An agent receives an assignment and four services: a read of what its run came
 to, a clock, an id source, and a cancellation signal. No store, no ledger, no
@@ -339,6 +361,78 @@ nothing passed, silent output attributes nothing, output that never mentions the
 artifact is an unattributed claim, and an end-to-end result from a local
 environment describes no deployed system. That is a different question from what
 state the evidence justifies, and the Verifier never answers the second one.
+
+---
+
+## 4e. The software factory
+
+P7 adds a **policy layer over the runtime**, in `packages/factory`. It decides
+which stage runs next, assigns typed tasks through `AgentRuntime.assign`, reads
+structured results, routes failures and bounds repair. It does not assemble
+context, call a provider, append a cognitive event, write the graph or decide a
+verification state: each has an owner and the factory calls that owner. There is
+no second orchestrator and no second event store
+([ADR-0023](../adr/0023-software-factory-and-the-verified-artifact.md)).
+
+```canonical:FactoryStage
+PLAN
+ARCHITECT
+BUILD
+TEST
+SECURITY_REVIEW
+DIAGNOSE
+REPAIR
+VERIFY
+```
+
+```
+PLAN → ARCHITECT → BUILD → TEST → SECURITY_REVIEW → VERIFY
+                             │           │            │
+                             └───────────┴────────────┴──► DIAGNOSE → REPAIR
+                                                                         │
+                                                        back to TEST ◄───┘
+```
+
+**A repair re-enters at `TEST`, never at `VERIFY`**, and `VERIFY` is reachable
+only from `SECURITY_REVIEW`. Both are properties of the stage table, asserted
+over it rather than over a path someone walked.
+
+### 4e.1 Who does what, and what each may claim
+
+| Role | Does | Cannot |
+|---|---|---|
+| Builder | Frames a `PRODUCE_ARTIFACT` run; the core records each artifact at `GENERATED` | Mark anything tested, run anything, or report that its work is correct |
+| QA | Submits the runner's real output as evidence, and says when a suite passed without touching the subject | Decide what the evidence justifies |
+| Security | Applies deterministic checks to artifact text and reports findings with the matched line | Approve anything, or claim a clean result it did not check for |
+| Repair | Frames a `DIAGNOSE_FAILURE` run and proposes a bounded, targeted change | Retry blindly, skip QA or Security, or exceed its attempt bound |
+
+The factory runs the sandbox; QA reports what it did. An agent cannot reach a
+sandbox, which is what keeps execution out of the domain and makes the evidence
+something the core observed rather than something an agent claimed.
+
+### 4e.2 Concurrency
+
+One project runs one factory stage at a time
+([ADR-0021](../adr/0021-impact-leases-and-serialised-factory-work.md)). Every
+stage takes an **impact lease** — the nodes it depends on, computed by the core
+from the graph, plus the ledger position it read them at — and the lease is
+re-checked after the work. A stage whose leased region changed underneath is
+re-run once; a second staleness blocks the change rather than looping.
+
+A lease is not a lock, because nothing contends for one. It exists so staleness
+is detected rather than assumed away, and so that admission control over
+overlapping leases is the seam concurrency would use rather than a rewrite.
+
+### 4e.3 The repair loop
+
+```
+FAILURE → DIAGNOSE → REPAIR → TEST → SECURITY_REVIEW → VERIFY
+```
+
+Bounded by `maxRepairAttempts` (default 3). On exhaustion the change is blocked,
+every attempt is kept on the ledger with its diagnosis, and the run reports why.
+It does not keep trying and it does not declare success. A repair that repeats
+an approach already tried for the same failure is flagged as such.
 
 ---
 

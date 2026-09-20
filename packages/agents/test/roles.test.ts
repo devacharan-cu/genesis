@@ -45,6 +45,7 @@ const assignment: TaskAssignmentBody = {
   context: [],
   budget: { maxOutputTokens: 512, timeoutMs: 1000 },
   deadline: '2026-09-19T10:05:00.000Z',
+  input: null,
 };
 
 const run = (over: Partial<RunSummary> = {}): RunSummary => ({
@@ -52,6 +53,7 @@ const run = (over: Partial<RunSummary> = {}): RunSummary => ({
   cycleId: 'cyc_1',
   callId: 'rsn_1',
   failure: null,
+  produced: null,
   proposals: [{ kind: 'RECORD_BELIEF', accepted: true, reason: null, detail: null }],
   context: { status: 'ASSEMBLED', usedTokens: 100, budgetTokens: 4000, shown: [{ id: 'mem_1', kind: 'BELIEF', mandatory: null }] },
   ...over,

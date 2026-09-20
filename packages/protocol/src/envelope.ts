@@ -84,6 +84,13 @@ export const TaskAssignmentBody = z
       .max(500),
     budget: z.object({ maxOutputTokens: z.number().int().positive(), timeoutMs: z.number().int().positive() }).strict(),
     deadline: Iso,
+    /**
+     * The role-specific input for this task, validated by the role that reads
+     * it (`ROLE_INPUTS` in factory.ts). `JsonValue`, so an assignment survives
+     * the round trip through the ledger unchanged and a task can be replayed
+     * from what was recorded rather than from what a caller still holds.
+     */
+    input: JsonValue.nullable().default(null),
   })
   .strict();
 export type TaskAssignmentBody = z.infer<typeof TaskAssignmentBody>;

@@ -210,6 +210,55 @@ importers:
         specifier: workspace:*
         version: link:../verification
 
+  packages/factory:
+    dependencies:
+      '@genesis/adapters-sandbox-local':
+        specifier: workspace:*
+        version: link:../adapters-sandbox-local
+      '@genesis/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@genesis/cognition':
+        specifier: workspace:*
+        version: link:../cognition
+      '@genesis/core':
+        specifier: workspace:*
+        version: link:../core
+      '@genesis/core-types':
+        specifier: workspace:*
+        version: link:../core-types
+      '@genesis/graph':
+        specifier: workspace:*
+        version: link:../graph
+      '@genesis/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@genesis/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@genesis/projections':
+        specifier: workspace:*
+        version: link:../projections
+      '@genesis/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@genesis/reasoning':
+        specifier: workspace:*
+        version: link:../reasoning
+      '@genesis/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
+      '@genesis/verification':
+        specifier: workspace:*
+        version: link:../verification
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/graph:
     dependencies:
       '@genesis/core-types':

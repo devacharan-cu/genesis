@@ -202,6 +202,44 @@ export const TERMINAL_AGENT_TASK_STATES: readonly AgentTaskState[] = ['COMPLETED
 export const isTerminalAgentTaskState = (state: AgentTaskState): boolean =>
   TERMINAL_AGENT_TASK_STATES.includes(state);
 
+/**
+ * ADR-0022. What a role may ask a model for. Closed because the core owns the
+ * system prompt, the output schema and the handler for each one: a role names a
+ * purpose and supplies no wording, so no model-specific behaviour reaches a
+ * domain package.
+ *
+ * It lives here rather than in `reasoning` because `protocol` and `agents` name
+ * purposes and may not depend on the reasoning port.
+ */
+export const REASONING_PURPOSES = ['PROPOSE_COGNITIVE_UPDATES', 'PRODUCE_ARTIFACT', 'DIAGNOSE_FAILURE'] as const;
+export type ReasoningPurpose = (typeof REASONING_PURPOSES)[number];
+
+/**
+ * ADR-0023 §2. The factory pipeline, in order. `DIAGNOSE` and `REPAIR` are
+ * entered only from a failure, and a repaired change re-enters at `TEST`.
+ */
+export const FACTORY_STAGES = [
+  'PLAN',
+  'ARCHITECT',
+  'BUILD',
+  'TEST',
+  'SECURITY_REVIEW',
+  'DIAGNOSE',
+  'REPAIR',
+  'VERIFY',
+] as const;
+export type FactoryStage = (typeof FACTORY_STAGES)[number];
+
+/** Ordered highest first. The order is load-bearing: a blocking threshold compares against it. */
+export const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] as const;
+export type Severity = (typeof SEVERITIES)[number];
+
+/** Rank 1 is the most severe. Derived from the array so the canonical order governs. */
+export const severityRank = (severity: Severity): number => SEVERITIES.indexOf(severity) + 1;
+
+/** True when `a` is at least as severe as `b`. The blocking test, in one place. */
+export const atLeastAsSevere = (a: Severity, b: Severity): boolean => severityRank(a) <= severityRank(b);
+
 export const COGNITIVE_LOOP_PHASES = [
   'OBSERVE',
   'UPDATE_WORLD_MODEL',
@@ -242,5 +280,8 @@ export const CANONICAL_ENUMS = {
   AgentRole: AGENT_ROLES,
   MessageKind: MESSAGE_KINDS,
   AgentTaskState: AGENT_TASK_STATES,
+  ReasoningPurpose: REASONING_PURPOSES,
+  FactoryStage: FACTORY_STAGES,
+  Severity: SEVERITIES,
   CognitiveLoopPhase: COGNITIVE_LOOP_PHASES,
 } as const satisfies Record<string, readonly string[]>;

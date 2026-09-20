@@ -93,6 +93,26 @@ filesystem.
 The sandbox is also what makes evidence trustworthy: a recorded exit code from a
 controlled environment with a pinned commit and image digest is reproducible.
 
+### 4.0 Artifact review, and its limits (P7)
+
+The factory's Security stage applies deterministic checks to the text of the
+artifacts in a change: process and filesystem reach, dynamic evaluation,
+shell-shaped string construction, path traversal, credential-shaped literals,
+network egress, disabled checks, and authority escalation — an artifact naming
+`HUMAN_DECISION` or `VERIFIED_SYSTEM_STATE` is claiming an authority no
+generated code may assert (ADR-0005).
+
+Every finding carries the rule, the severity, the file, the line and **the
+matched text**, so a finding can be checked rather than believed. Findings at or
+above the configured blocking severity stop the change before `VERIFY`.
+
+**What it is not.** It is a pattern-based reviewer over artifact text. It
+performs no dataflow analysis, no taint tracking and no dependency or CVE
+lookup, and it sees nothing outside the artifacts in the change. A clean result
+means *these checks did not match*, which is a smaller claim than "this is
+safe", and the report says so in those words. Closing that gap is P8 work and is
+listed as such.
+
 ### 4.1 Dependency handling (T4)
 
 Installs run in a separate network phase with the registry allowlisted, a

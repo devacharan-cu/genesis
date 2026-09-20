@@ -180,6 +180,7 @@ describe('an agent cannot reach state', () => {
       context: [],
       budget: { maxOutputTokens: 100, timeoutMs: 100 },
       deadline: '2026-09-19T10:05:00.000Z',
+      input: null,
     };
     await new Spy(manifest()).handle(assignment, {
       run: null,
@@ -204,6 +205,7 @@ describe('an agent cannot reach state', () => {
       context: [],
       budget: { maxOutputTokens: 100, timeoutMs: 100 },
       deadline: '2026-09-19T10:05:00.000Z',
+      input: null,
     };
     const outcome = await new VerifierAgent(manifest({ role: 'VERIFIER', reasoningProvider: null })).handle(assignment, {
       run: null,

@@ -33,6 +33,7 @@ const assignment: TaskAssignmentBody = {
   context: [],
   budget: { maxOutputTokens: 512, timeoutMs: 1000 },
   deadline: '2026-09-19T10:05:00.000Z',
+  input: null,
 };
 
 const envelope = (over: Partial<Envelope> = {}, task = taskId): Envelope =>

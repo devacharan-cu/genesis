@@ -74,6 +74,16 @@ const SAFETY_CRITICAL = [
   'packages/core/src/agent-events.ts', // an agent task's record on the ledger
   'packages/core/src/agent-runtime.ts', // assignment -> orchestrator -> outcome, all recorded
   'packages/core/src/agent-tasks.ts', // failed and abandoned agent tasks visible from the ledger
+  'packages/core/src/purposes.ts', // the prompts, schemas and handlers a role may not supply (ADR-0022)
+  'packages/core/src/artifacts.ts', // the second door: a produced file becomes a record, and no more
+  'packages/protocol/src/factory.ts', // what a role may claim to have done
+  'packages/agents/src/security-checks.ts', // the only thing that blocks on a judgement
+  'packages/agents/src/factory-roles.ts', // report what was done, never what it means
+  'packages/factory/src/pipeline.ts', // a repair cannot reach VERIFY unchecked (ADR-0023 2)
+  'packages/factory/src/leases.ts', // staleness is detected rather than assumed away
+  'packages/factory/src/events.ts', // a factory run's record
+  'packages/factory/src/verified-artifacts.ts', // the answer to "is it done"
+  'packages/factory/src/factory.ts', // intent to verified artifact, all recorded
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -100,6 +110,7 @@ export default defineConfig({
       '@genesis/adapters-aws': pkg('adapters-aws'),
       '@genesis/adapters-sqlite': pkg('adapters-sqlite'),
       '@genesis/agents': pkg('agents'),
+      '@genesis/factory': pkg('factory'),
       '@genesis/testkit': pkg('testkit'),
     },
   },

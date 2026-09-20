@@ -34,6 +34,7 @@ import {
 import {
   AUTHORITY_LEVELS,
   type EventActor,
+  REASONING_PURPOSES,
   type JsonValue,
   newCycleId,
   newReasoningCallId,
@@ -58,7 +59,9 @@ import {
   ReasoningResult,
 } from '@genesis/reasoning';
 import { z } from 'zod';
+import { type ArtifactLimits, artifactPayload, checkArtifacts, DEFAULT_ARTIFACT_LIMITS } from './artifacts.js';
 import { evaluateProposal, type Proposer } from './evaluate.js';
+import { contractFor, type DiagnosisOutput, type OutcomeKind } from './purposes.js';
 import { ORCHESTRATION_EVENTS, type OrchestrationEventType, type ProposalEvaluated } from './events.js';
 import { GraphMirror, type MirrorReport } from './mirror.js';
 import { checkEnvelope } from './proposals.js';
@@ -98,12 +101,16 @@ export interface OrchestratorOptions {
   readonly assembly?: AssemblyOptions;
   /** Output longer than this is not recorded, and so not acted on. */
   readonly maxRecordedOutputChars?: number;
+  /** Bounds on what one PRODUCE_ARTIFACT run may land. */
+  readonly artifacts?: ArtifactLimits;
 }
 
 export const TaskInput = z
   .object({
     id: z.string().min(1),
     kind: z.string().min(1),
+    /** What this run asks a model for (ADR-0022). The core owns the contract. */
+    purpose: z.enum(REASONING_PURPOSES).default('PROPOSE_COGNITIVE_UPDATES'),
     text: z.string().min(1),
     nodeIds: z.array(z.string().min(1)).default([]),
     activeGoalId: z.string().min(1).nullable().default(null),
@@ -126,6 +133,12 @@ export interface RunResult {
   readonly failure: { readonly kind: string; readonly message: string } | null;
   readonly proposals: readonly ProposalEvaluated[];
   readonly mirror: MirrorReport | null;
+  /**
+   * What a non-cognitive purpose produced, already checked and recorded: the
+   * artifacts a build landed, or the diagnosis a repair read. Null for a
+   * cognitive run, whose whole outcome is in `proposals`.
+   */
+  readonly produced: JsonValue | null;
 }
 
 const DEFAULTS = { maxOutputTokens: 2048, timeoutMs: 60_000, guardMs: 1_000, maxRecordedOutputChars: 100_000 };
@@ -244,15 +257,21 @@ export class Orchestrator {
         mandatoryTokens: manifest.mandatoryTokens,
         mandatory: manifest.entries.filter((e) => e.mandatory !== null).map((e) => e.id),
       });
-      return finish({ status: 'SPLIT_REQUIRED', manifest, callId: null, failure: null, proposals: [], mirror: null });
+      return finish({ status: 'SPLIT_REQUIRED', manifest, callId: null, failure: null, proposals: [], mirror: null, produced: null });
     }
 
     // 3. The call, recorded before it is made.
     const callId = this.#ids.call();
-    const reasoningRequest = buildReasoningRequest(callId, task.text, assembly.items, {
-      maxOutputTokens: this.#o.reasoning?.maxOutputTokens ?? DEFAULTS.maxOutputTokens,
-      timeoutMs: this.#o.reasoning?.timeoutMs ?? DEFAULTS.timeoutMs,
-    });
+    const reasoningRequest = buildReasoningRequest(
+      callId,
+      task.text,
+      assembly.items,
+      {
+        maxOutputTokens: this.#o.reasoning?.maxOutputTokens ?? DEFAULTS.maxOutputTokens,
+        timeoutMs: this.#o.reasoning?.timeoutMs ?? DEFAULTS.timeoutMs,
+      },
+      task.purpose,
+    );
     await record(ORCHESTRATION_EVENTS.REASONING_REQUESTED, {
       taskId: task.id,
       callId,
@@ -264,7 +283,7 @@ export class Orchestrator {
 
     const failed = async (kind: string, message: string, signature: string): Promise<RunResult> => {
       await record(ORCHESTRATION_EVENTS.EXECUTION_FAILED, { signature });
-      return finish({ status: 'FAILED', manifest, callId, failure: { kind, message }, proposals: [], mirror: null });
+      return finish({ status: 'FAILED', manifest, callId, failure: { kind, message }, proposals: [], mirror: null, produced: null });
     };
 
     const outcome = await this.#call(reasoningRequest);
@@ -293,16 +312,49 @@ export class Orchestrator {
       outputLength: result.outputText.length,
     });
 
-    const envelope = recordable
-      ? checkEnvelope(result.output)
-      : ({ ok: false, issues: [`output of ${result.outputText.length} characters exceeds the recorded limit of ${limit}`] } as const);
-    if (!envelope.ok) {
-      const reason = recordable ? 'NOT_AN_ENVELOPE' : 'TOO_LARGE';
-      await record(ORCHESTRATION_EVENTS.REASONING_OUTPUT_REJECTED, { callId, reason, issues: [...envelope.issues] });
-      return failed(`OUTPUT_${reason}`, envelope.issues.join('; '), `${task.kind}:reasoning:INVALID_OUTPUT`);
+    // Output too large to record is output that cannot be replayed, so it is
+    // not acted on, whatever purpose asked for it.
+    if (!recordable) {
+      const issues = [`output of ${result.outputText.length} characters exceeds the recorded limit of ${limit}`];
+      await record(ORCHESTRATION_EVENTS.REASONING_OUTPUT_REJECTED, { callId, reason: 'TOO_LARGE', issues });
+      return failed('OUTPUT_TOO_LARGE', issues.join('; '), `${task.kind}:reasoning:INVALID_OUTPUT`);
     }
 
-    // 5. Each proposal on its own merits (SPEC-04 §4.3).
+    // 5. What the output means is the purpose's business. One call path, one
+    //    recording discipline, one handler per shape of thing (ADR-0022 §1).
+    const contract = contractFor(task.purpose);
+    if (contract.outcome !== 'COGNITIVE_PROPOSALS') {
+      const checked = contract.accepts.safeParse(result.output);
+      if (!checked.success) {
+        const issues = checked.error.issues.slice(0, 5).map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`);
+        await record(ORCHESTRATION_EVENTS.REASONING_OUTPUT_REJECTED, { callId, reason: 'NOT_AN_ENVELOPE', issues });
+        return failed('OUTPUT_NOT_AN_ENVELOPE', issues.join('; '), `${task.kind}:reasoning:INVALID_OUTPUT`);
+      }
+      const produced = await this.#produce(scope, record, contract.outcome, checked.data, callId, proposer);
+      if (!produced.ok) {
+        await record(ORCHESTRATION_EVENTS.REASONING_OUTPUT_REJECTED, {
+          callId,
+          reason: 'NOT_AN_ENVELOPE',
+          issues: [produced.reason],
+        });
+        return failed('OUTPUT_REFUSED', produced.reason, `${task.kind}:reasoning:REFUSED_OUTPUT`);
+      }
+      // A non-cognitive run changes no cognitive state, so the graph needs no
+      // reconciliation: it mirrors committed cognition and nothing else (ADR-0016).
+      return finish({ status: 'COMPLETED', manifest, callId, failure: null, proposals: [], mirror: null, produced: produced.value });
+    }
+
+    const envelope = checkEnvelope(result.output);
+    if (!envelope.ok) {
+      await record(ORCHESTRATION_EVENTS.REASONING_OUTPUT_REJECTED, {
+        callId,
+        reason: 'NOT_AN_ENVELOPE',
+        issues: [...envelope.issues],
+      });
+      return failed('OUTPUT_NOT_AN_ENVELOPE', envelope.issues.join('; '), `${task.kind}:reasoning:INVALID_OUTPUT`);
+    }
+
+    // 6. Each proposal on its own merits (SPEC-04 §4.3).
     const proposals: ProposalEvaluated[] = [];
     for (const [index, item] of envelope.items.entries()) {
       const evaluated = await this.#evaluate(scope, proposer, cycleId, callId, index, item);
@@ -310,9 +362,63 @@ export class Orchestrator {
       proposals.push(evaluated);
     }
 
-    // 6. The graph follows the committed state.
+    // 7. The graph follows the committed state.
     const mirror = await this.#mirror.reconcile(scope, (await this.#o.engine.state(scope)).state);
-    return finish({ status: 'COMPLETED', manifest, callId, failure: null, proposals, mirror });
+    return finish({ status: 'COMPLETED', manifest, callId, failure: null, proposals, mirror, produced: null });
+  }
+
+  /**
+   * Records what a non-cognitive purpose produced.
+   *
+   * An artifact lands at `GENERATED`; a diagnosis lands as an assumption.
+   * Neither touches cognitive state, so neither goes through the cognitive
+   * deciders — and neither could, because no proposal kind does these things.
+   */
+  async #produce(
+    scope: ProjectScope,
+    record: (type: OrchestrationEventType, payload: JsonValue) => Promise<unknown>,
+    outcome: OutcomeKind,
+    output: unknown,
+    callId: string,
+    proposer: Proposer,
+  ): Promise<{ readonly ok: true; readonly value: JsonValue } | { readonly ok: false; readonly reason: string }> {
+    if (outcome === 'ARTIFACTS') {
+      const checked = checkArtifacts(output, this.#o.artifacts ?? DEFAULT_ARTIFACT_LIMITS);
+      if (!checked.ok) return { ok: false, reason: checked.reason };
+      for (const artifact of checked.artifacts) {
+        await this.#o.ledger.append(scope, {
+          type: ORCHESTRATION_EVENTS.ARTIFACT_PROPOSED,
+          actor: proposer.actor,
+          // An agent's ceiling, and the floor for anything a model wrote: the
+          // artifact exists and nothing is claimed about it (SPEC-05 §2).
+          authority: 'AI_ASSUMPTION',
+          payload: artifactPayload(artifact, callId),
+          timestamp: this.#now(),
+          cycleId: null,
+        });
+      }
+      return {
+        ok: true,
+        value: {
+          artifacts: checked.artifacts.map((a) => ({
+            artifactId: a.artifactId,
+            path: a.path,
+            contentHash: a.contentHash,
+            bytes: a.bytes,
+          })),
+          limitations: [...checked.limitations],
+        },
+      };
+    }
+    const diagnosis = output as DiagnosisOutput;
+    await record(ORCHESTRATION_EVENTS.FAILURE_DIAGNOSED, {
+      callId,
+      rootCause: diagnosis.rootCause,
+      targetArtifacts: [...diagnosis.targetArtifacts],
+      approach: diagnosis.approach,
+      confidence: diagnosis.confidence,
+    });
+    return { ok: true, value: { ...diagnosis, targetArtifacts: [...diagnosis.targetArtifacts] } };
   }
 
   async #evaluate(

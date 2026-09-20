@@ -44,6 +44,7 @@ const activeGoalOf = (assignment: TaskAssignmentBody): string | null => assignme
 export class PlannerAgent extends BaseAgent {
   frame(assignment: TaskAssignmentBody): TaskFraming {
     return {
+      purpose: 'PROPOSE_COGNITIVE_UPDATES',
       kind: ROLE_TASK_KINDS.PLANNER,
       text: assignment.instruction,
       nodeIds: [],
@@ -57,6 +58,7 @@ export class PlannerAgent extends BaseAgent {
 export class ArchitectAgent extends BaseAgent {
   frame(assignment: TaskAssignmentBody): TaskFraming {
     return {
+      purpose: 'PROPOSE_COGNITIVE_UPDATES',
       kind: ROLE_TASK_KINDS.ARCHITECT,
       text: assignment.instruction,
       nodeIds: [],
@@ -76,6 +78,7 @@ export class ArchitectAgent extends BaseAgent {
 export class ResearcherAgent extends BaseAgent {
   frame(assignment: TaskAssignmentBody): TaskFraming {
     return {
+      purpose: 'PROPOSE_COGNITIVE_UPDATES',
       kind: ROLE_TASK_KINDS.RESEARCHER,
       text: assignment.instruction,
       nodeIds: [],
