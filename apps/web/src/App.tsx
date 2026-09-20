@@ -8,6 +8,20 @@ function SystemNode({ position, color, label, active, onClick }: { position: [nu
   const [hovered, setHovered] = useState(false);
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={active ? 2 : 0.5}>
+      <mesh position={position} onClick={onClick}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshStandardMaterial 
+          color={color} 
+          emissive={color} 
+          emissiveIntensity={active ? 2 : 0.5} 
+          wireframe={!active}
+          transparent
+          opacity={0.8}
+        />
+        <Text position={[0, -1.5, 0]} fontSize={0.4} color="white" anchorX="center" anchorY="middle">
+          {label}
+        </Text>
+      </mesh>
       <group position={position} onClick={(e) => { e.stopPropagation(); onClick?.(); }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
         <mesh scale={hovered || active ? 1.2 : 1}>
           <sphereGeometry args={[1, 32, 32]} />
@@ -76,6 +90,7 @@ export default function App() {
     if (isRunning) return;
     setIsRunning(true);
     setEvents([]);
+    await fetch('http://localhost:3001/start', { method: 'POST' });
     setStatus('Starting...');
     try {
       const res = await fetch('http://127.0.0.1:3001/start', { method: 'POST' });

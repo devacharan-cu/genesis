@@ -82,6 +82,8 @@ app.post('/start', async (req, res) => {
 
     // Seed goal
     await ledger.append(scope, {
+      kind: 'GoalEstablished', id: 'evt-1', timestamp: Date.now(),
+      goal: { id: 'goal-1', description: 'Build add.js', priority: 1, constraints: [] }
       type: 'GOAL_ESTABLISHED',
       actor: { kind: 'HUMAN', id: 'human-1' },
       authority: 'HUMAN_DECISION',
@@ -96,21 +98,34 @@ app.post('/start', async (req, res) => {
       for (const ev of events) {
         lastSeq = ev.seq;
         let node = 'system';
+        let msg = ev.kind;
         let msg = ev.type;
 
+        const anyEv = ev as Record<string, unknown>;
         const payload = ev.payload as Record<string, unknown> || {};
 
+        if (ev.kind === 'FactoryRunStarted') { node = 'system'; msg = 'Starting Factory Run'; }
+        else if (ev.kind === 'FactoryStageEntered') {
+          node = String(anyEv.stage).toLowerCase().split('_')[0];
+          msg = `Entered ${String(anyEv.stage)} stage`;
         if (ev.type === 'FACTORY_RUN_STARTED') { node = 'system'; msg = 'Starting Factory Run'; }
         else if (ev.type === 'FACTORY_STAGE_ENTERED') {
           node = String(payload.stage).toLowerCase().split('_')[0];
           msg = `Entered ${String(payload.stage)} stage`;
         }
+        else if (ev.kind === 'AgentAssigned') { node = 'system'; msg = `Assigned ${String(anyEv.role)}`; }
+        else if (ev.kind === 'ProposalRaised') { node = 'architect'; msg = `Proposed architecture constraint`; }
+        else if (ev.kind === 'ArtifactGenerated') { node = 'builder'; msg = `Generated artifact ${String(anyEv.path)}`; }
+        else if (ev.kind === 'ExperimentCompleted') { node = 'qa'; msg = `Executed tests against artifact`; }
+        else if (ev.kind === 'ArtifactVerified') { node = 'verifier'; msg = `Artifact VERIFIED. Signature valid.`; }
         else if (ev.type === 'AGENT_ASSIGNED') { node = 'system'; msg = `Assigned ${String(payload.role)}`; }
         else if (ev.type === 'PROPOSAL_RAISED') { node = 'architect'; msg = `Proposed architecture constraint`; }
         else if (ev.type === 'ARTIFACT_GENERATED') { node = 'builder'; msg = `Generated artifact ${String(payload.path)}`; }
         else if (ev.type === 'EXPERIMENT_COMPLETED') { node = 'qa'; msg = `Executed tests against artifact`; }
         else if (ev.type === 'ARTIFACT_VERIFIED') { node = 'verifier'; msg = `Artifact VERIFIED. Signature valid.`; }
 
+        const payload = `data: ${JSON.stringify({ node, msg, kind: ev.kind })}\n\n`;
+        clients.forEach(c => c.write(payload));
         const out = `data: ${JSON.stringify({ node, msg, kind: ev.type })}\n\n`;
         clients.forEach(c => c.write(out));
       }
@@ -127,6 +142,7 @@ app.post('/start', async (req, res) => {
 
     res.json({ ok: true });
   } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
     const error = err as Error & { details?: unknown };
     console.error('API Error:', error.message);
     if (error.details) console.error('Details:', JSON.stringify(error.details, null, 2));
