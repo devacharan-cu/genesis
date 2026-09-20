@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
@@ -18,7 +19,9 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.7.0",
-    "three": "^0.186.0"
+    "three": "^0.186.0",
+    "@genesis/console": "workspace:*",
+    "@genesis/core-types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

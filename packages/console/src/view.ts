@@ -192,7 +192,8 @@ const start = (): Working => ({
 
 /** What one event says. The whole reading of the ledger is here. */
 interface Reading {
-  readonly lane?: Lane;
+  /** Required: every reading names a lane, so there is no default to get wrong. */
+  readonly lane: Lane;
   readonly headline: string;
   readonly detail?: string | null;
   readonly severity?: Severity;
@@ -219,8 +220,11 @@ const laneOfTask = (w: Working, taskId: string | null): Lane => {
   return 'SYSTEM';
 };
 
-// eslint-disable-next-line complexity -- one branch per event type; a table of
-// small readings is easier to check against the ledger than a dispatch map.
+/*
+ * One branch per event type. A dispatch map would be shorter and harder to
+ * check: laid out like this, the reading of each event sits next to the schema
+ * it reads, and a reviewer can walk the list against the producing package.
+ */
 function read(w: Working, event: GenesisEvent): Reading {
   const p = obj(event.payload);
   const type = event.type;
@@ -535,7 +539,7 @@ function step(w: Working, event: GenesisEvent): void {
   }
 
   const r = read(w, event);
-  const lane = r.lane ?? 'SYSTEM';
+  const lane = r.lane;
   const view: EventView = {
     seq: event.seq,
     id: event.id,

@@ -1,32 +1,56 @@
-# React + TypeScript + Vite
+# GENESIS console
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The operator console: a React app through which a person states an intent and
+watches the real GENESIS factory carry it out.
 
-Currently, two official plugins are available:
+## Running it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+corepack pnpm --filter api start   # the runtime, on :3001
+corepack pnpm --filter web dev     # this app, on :5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## The one rule
+
+**The browser holds raw ledger events and derives everything else with
+`foldConsole`** — the same function the API uses (ADR-0027). There is no second
+model of what happened in here: no counters, no timers, no stage list maintained
+by hand. If you need to show something new, derive it in `@genesis/console` and
+it will be correct in both places at once.
+
+Two consequences worth knowing before changing anything:
+
+- **Replay is free.** Showing the run as it stood at event *N* is
+  `foldConsole(events.slice(0, N))`. That is all the scrubber does.
+- **A new event type cannot be silently ignored.** The fold reports anything it
+  has no reading for in `anomalies`, and the console displays that count.
+
+## What is real
+
+Everything after the model's answer: real agents, a real sandbox running real
+`node`, real evidence, the real verification engine, a real hash-chained ledger.
+The model's answer itself comes from the repository's deterministic provider,
+and the header says `reasoning deterministic-local` so nobody has to guess.
+
+Nothing here animates a stage that is not running, and replay is labelled as
+replay throughout.
+
+## Layout
+
+| File | Contents |
+|---|---|
+| `src/App.tsx` | Composition, the event/cursor state, and the replay loop |
+| `src/lib/api.ts` | The typed client and the SSE subscription |
+| `src/lib/theme.ts` | One colour and one mandate per lane, keyed off the console's own vocabulary |
+| `src/components/PipelineRibbon.tsx` | The six canonical stages, plus the repair loop when one happened |
+| `src/components/EventStream.tsx` | The timeline, with lane and stage filters and a per-event inspector |
+| `src/components/NetworkScene.tsx` | The system map. Lazy-loaded, and degrades to a written explanation without WebGL |
+| `src/components/ArtifactPanel.tsx` | What came out, its hash, and the evidence behind its state |
+| `src/components/ReplayBar.tsx` | Scrubbing recorded history |
+
+## Accessibility and degradation
+
+Every control is a real button with a label, filters are keyboard reachable, and
+the timeline rows are focusable. The 3D map is loaded on its own chunk and sits
+behind a capability check and an error boundary: without WebGL, or after a lost
+context, the panel explains itself and the rest of the console is unaffected.

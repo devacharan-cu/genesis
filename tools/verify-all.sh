@@ -19,7 +19,7 @@ PNPM="corepack pnpm"
 
 status=0
 step=0
-TOTAL=7
+TOTAL=9
 
 run() {
   step=$((step + 1))
@@ -47,11 +47,17 @@ run "package boundaries (ADR-0001)" \
 
 run "negative test: can the boundary checker fail?" \
   bash tools/check-boundaries.negative-test.sh
-# run "negative test: can the boundary checker fail?" \
-#   bash tools/check-boundaries.negative-test.sh
 
 run "typecheck (strict, ADR-0002)" \
   $PNPM exec tsc -p tsconfig.json --noEmit
+
+# The apps sit outside the root project's include, so each gets its own pass.
+# An app that is not typechecked is where strictness quietly stops.
+run "typecheck: console API" \
+  $PNPM exec tsc -p apps/api/tsconfig.json --noEmit
+
+run "typecheck and build: console web app" \
+  bash tools/check-web.sh
 
 run "lint" \
   $PNPM exec eslint .

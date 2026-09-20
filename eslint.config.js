@@ -14,7 +14,9 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['**/*.ts'],
+    // The console's components are TypeScript too, and are held to the same
+    // rules: an app that is not linted is where `any` comes back.
+    files: ['**/*.ts', '**/*.tsx'],
     rules: {
       // ADR-0002 rule 1: no `any`. Use `unknown` plus narrowing.
       '@typescript-eslint/no-explicit-any': 'error',
@@ -67,8 +69,14 @@ export default tseslint.config(
     rules: { 'no-console': 'off' },
   },
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     rules: { 'no-undef': 'off' },
+  },
+  {
+    // The browser console is how a lost graphics context reports itself, and
+    // the API logs failures it must never swallow.
+    files: ['apps/**/*.ts', 'apps/**/*.tsx'],
+    rules: { 'no-console': ['error', { allow: ['error', 'warn'] }] },
   },
   {
     // Conformance suites and tests legitimately reach into internals.

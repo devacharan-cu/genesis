@@ -41,6 +41,7 @@ listed downsides has not been thought through.
 | [0024](0024-dynamodb-single-table-and-cloud-persistence.md) | DynamoDB Single-Table and Cloud Persistence | Accepted |
 | [0025](0025-cloud-runtime-and-what-is-not-adopted.md) | Cloud runtime and what is not adopted | Accepted |
 | [0026](0026-infrastructure-as-typed-code-and-platform-ports.md) | Infrastructure as typed code and platform ports | Accepted |
+| [0027](0027-the-console-as-a-pure-fold.md) | The console as a pure fold, shared by the server and the browser | Accepted |
 
 ## Statuses
 

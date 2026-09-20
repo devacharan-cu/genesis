@@ -16,6 +16,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* ADR-0002: the app is held to the same strictness as the packages. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

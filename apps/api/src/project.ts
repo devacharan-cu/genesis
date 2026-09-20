@@ -104,6 +104,32 @@ export class WatchedLedger implements EventLedger {
 
 export type RunStatus = 'IDLE' | 'RUNNING' | 'FINISHED' | 'ERRORED';
 
+/**
+ * A place to say "something changed".
+ *
+ * The ledger's own watch covers history moving. A run's STATUS settles after
+ * the last event has landed, so without this a client would see every event
+ * and never learn the run had finished.
+ */
+export class Notifier {
+  readonly #listeners = new Set<() => void>();
+
+  watch(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  announce(): void {
+    for (const listener of this.#listeners) {
+      try {
+        listener();
+      } catch {
+        // A broken listener must not break the thing that changed.
+      }
+    }
+  }
+}
+
 export interface Project {
   readonly projectId: string;
   readonly scope: ProjectScope;
@@ -111,6 +137,8 @@ export interface Project {
   readonly scenario: ScenarioName;
   readonly goalId: string;
   readonly ledger: WatchedLedger;
+  /** Announces status changes, which are not ledger events. */
+  readonly changes: Notifier;
   readonly createdAt: string;
   status: RunStatus;
   /** Set only when the run itself could not be carried out. */
@@ -169,6 +197,7 @@ export async function createProject(intent: string, scenario: ScenarioName): Pro
     scenario,
     goalId,
     ledger,
+    changes: new Notifier(),
     createdAt: new Date().toISOString(),
     status: 'IDLE',
     error: null,

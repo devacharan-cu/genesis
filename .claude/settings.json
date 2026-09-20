@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py -3 -c ' *)",
+      "Bash(npx tsx *)",
+      "Bash(echo \"INSTALL=$?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:3001/api/scenarios)",
+      "Bash(netstat -ano)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://[::1]:5173/)",
+      "Bash(curl -s -o /dev/null -w \"App.tsx HTTP %{http_code}\\\\n\" \"http://[::1]:5173/src/App.tsx\")",
+      "Bash(curl -s \"http://[::1]:5173/src/App.tsx\")",
+      "Bash(git reset *)",
+      "Bash(git -c user.name=\"devacharan-cu\" -c user.email=\"devacharan@gmail.com\" commit -q -F -)",
+      "Bash(echo \"PUSH_EXIT=$?\")",
+      "Bash(curl -s -o /dev/null -w \"API  %{http_code}\\\\n\" http://127.0.0.1:3001/api/health)",
+      "Bash(curl -s -o /dev/null -w \"WEB  %{http_code}\\\\n\" \"http://[::1]:5173/\")",
+      "Bash(curl -s -o /dev/null -w \"API %{http_code}\\\\n\" http://127.0.0.1:3001/api/health)",
+      "Bash(curl -s -o /dev/null -w \"WEB %{http_code}\\\\n\" \"http://[::1]:5173/\")",
+      "Bash(bash tools/verify-all.sh)",
+      "Bash(echo \"GATE_EXIT=$?\")",
+      "Bash(npx tsc *)",
+      "Bash(npm i *)",
+      "Bash(npx playwright-core *)",
+      "Bash(echo \"PW_EXIT=$?\")"
+    ]
+  }
+}

@@ -13,8 +13,7 @@
  * the ledger, so a dropped connection loses nothing.
  */
 
-import { describeOne, foldConsole, type EventView } from '@genesis/console';
-import type { GenesisEvent } from '@genesis/core-types';
+import { foldConsole } from '@genesis/console';
 import cors from 'cors';
 import express, { type Request, type Response } from 'express';
 import { createProject, type Project, runFactory } from './project.js';
@@ -46,21 +45,10 @@ export function createServer(options: ServerOptions = {}): express.Express {
   };
 
   /** Everything the console shows about a project, folded from its ledger. */
-  const stateOf = async (project: Project): Promise<Record<string, unknown>> => {
-    const events = await project.ledger.read(project.scope);
-    return {
-      project: {
-        projectId: project.projectId,
-        intent: project.intent,
-        scenario: project.scenario,
-        goalId: project.goalId,
-        createdAt: project.createdAt,
-        status: project.status,
-        error: project.error,
-      },
-      console: foldConsole(events),
-    };
-  };
+  const stateOf = async (project: Project): Promise<Record<string, unknown>> => ({
+    project: describeProject(project),
+    console: foldConsole(await project.ledger.read(project.scope)),
+  });
 
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -156,7 +144,11 @@ export function createServer(options: ServerOptions = {}): express.Express {
         report(`run for ${project.projectId}`, error);
         project.status = 'ERRORED';
         project.error = messageOf(error);
-      });
+      })
+      // A status settles after the last event has landed, so the stream is
+      // told directly; otherwise a client would see the whole run and never
+      // learn that it ended.
+      .finally(() => project.changes.announce());
   });
 
   app.get('/api/projects/:projectId/stream', (req, res) => {
@@ -170,10 +162,11 @@ export function createServer(options: ServerOptions = {}): express.Express {
     res.flushHeaders();
 
     let sentSeq = 0;
-    let history: GenesisEvent[] = [];
     let pumping = false;
     let again = false;
     let closed = false;
+    /** The last status sent, so an unchanged status is not repeated per event. */
+    let sentStatus: string | null = null;
 
     const send = (event: string, data: unknown): void => {
       if (closed) return;
@@ -198,12 +191,16 @@ export function createServer(options: ServerOptions = {}): express.Express {
           again = false;
           const fresh = await project.ledger.read(project.scope, { fromSeq: sentSeq + 1 });
           for (const event of fresh) {
-            const view: EventView = describeOne(history, event);
-            history = [...history, event];
             sentSeq = event.seq;
-            send('append', view);
+            // The raw event, not a reading of it: the browser folds with the
+            // same function this server does, so the two cannot disagree.
+            send('append', { event });
           }
-          if (fresh.length > 0) send('status', { status: project.status, error: project.error, lastSeq: sentSeq });
+          const signature = `${project.status}:${project.error ?? ''}`;
+          if (signature !== sentStatus) {
+            sentStatus = signature;
+            send('status', { status: project.status, error: project.error, lastSeq: sentSeq });
+          }
         } while (again && !closed);
       } catch (error) {
         report('stream pump', error);
@@ -218,16 +215,16 @@ export function createServer(options: ServerOptions = {}): express.Express {
     void (async (): Promise<void> => {
       try {
         const events = await project.ledger.read(project.scope);
-        history = events;
         sentSeq = events[events.length - 1]?.seq ?? 0;
-        send('snapshot', { ...(await stateOf(project)), lastSeq: sentSeq });
+        send('snapshot', { events, project: describeProject(project), lastSeq: sentSeq });
       } catch (error) {
         report('stream snapshot', error);
         send('error', { error: messageOf(error) });
       }
     })();
 
-    const unwatch = project.ledger.watch(() => void pump());
+    const unwatchLedger = project.ledger.watch(() => void pump());
+    const unwatchStatus = project.changes.watch(() => void pump());
     // A comment line keeps a proxy from closing an idle stream, and costs one
     // line every fifteen seconds.
     const heartbeat = setInterval(() => {
@@ -236,7 +233,8 @@ export function createServer(options: ServerOptions = {}): express.Express {
 
     req.on('close', () => {
       closed = true;
-      unwatch();
+      unwatchLedger();
+      unwatchStatus();
       clearInterval(heartbeat);
     });
   });
@@ -255,4 +253,17 @@ function report(what: string, error: unknown): void {
   const detail = error as { details?: unknown };
   console.error(`[genesis-api] ${what}: ${messageOf(error)}`);
   if (detail.details !== undefined) console.error('[genesis-api] details:', JSON.stringify(detail.details));
+}
+
+/** The project's own metadata. Everything else a client needs is the fold's. */
+function describeProject(project: Project): Record<string, unknown> {
+  return {
+    projectId: project.projectId,
+    intent: project.intent,
+    scenario: project.scenario,
+    goalId: project.goalId,
+    createdAt: project.createdAt,
+    status: project.status,
+    error: project.error,
+  };
 }

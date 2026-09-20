@@ -115,6 +115,11 @@ const SAFETY_CRITICAL = [
   'packages/cloud/src/handlers.ts', // idempotent folds and precise batch failures
   'packages/cloud/src/api.ts', // the only place a HUMAN_DECISION is minted in a deployment
   'packages/cloud/src/bindings.ts', // where the deployment and the runtime are checked against each other
+  // The console is what a person reads. A silent failure here does not corrupt
+  // state — it misleads the operator about what the system did, which for a
+  // system whose whole claim is auditability is the same kind of harm.
+  'packages/console/src/view.ts', // the fold: attribution, honesty, no invention
+  'packages/console/src/lanes.ts', // the vocabulary the fold attributes into
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -152,11 +157,13 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['packages/*/test/**/*.test.ts'],
+    // The apps are tested too: the API is the only thing between a person and
+    // the core, and an untested surface there is an untested system.
+    include: ['packages/*/test/**/*.test.ts', 'apps/*/test/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'json-summary'],
-      include: ['packages/*/src/**/*.ts'],
+      include: ['packages/*/src/**/*.ts', 'apps/api/src/**/*.ts'],
       exclude: ['packages/*/src/**/index.ts', 'packages/testkit/**'],
       thresholds: {
         // Repo-wide floor. A smoke alarm, not a target.
