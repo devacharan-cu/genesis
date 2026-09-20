@@ -1,0 +1,34 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx tsx index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@genesis/adapters-sandbox-local": "workspace:*",
+    "@genesis/adapters-sqlite": "workspace:*",
+    "@genesis/cloud": "workspace:*",
+    "@genesis/cognition": "workspace:*",
+    "@genesis/core": "workspace:*",
+    "@genesis/core-types": "workspace:*",
+    "@genesis/factory": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/verification": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
