@@ -127,7 +127,7 @@ app.post('/start', async (req, res) => {
 
     res.json({ ok: true });
   } catch (err: unknown) {
-    const error = err as any;
+    const error = err as Error & { details?: unknown };
     console.error('API Error:', error.message);
     if (error.details) console.error('Details:', JSON.stringify(error.details, null, 2));
     res.status(500).json({ error: error.message });
