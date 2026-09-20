@@ -1,26 +1,31 @@
 import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars, Text, Float, Line } from '@react-three/drei';
-import { Brain, Activity, Terminal, Shield, CheckCircle, Play } from 'lucide-react';
+import { OrbitControls, Stars, Text, Float, Line, Billboard } from '@react-three/drei';
+import { Brain, Activity, Terminal, Shield, CheckCircle, Play, Loader2 } from 'lucide-react';
 
 // 3D Nodes representing the system components
 function SystemNode({ position, color, label, active, onClick }: { position: [number, number, number], color: string, label: string, active: boolean, onClick?: () => void }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={active ? 2 : 0.5}>
-      <mesh position={position} onClick={onClick}>
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial 
-          color={color} 
-          emissive={color} 
-          emissiveIntensity={active ? 2 : 0.5} 
-          wireframe={!active}
-          transparent
-          opacity={0.8}
-        />
-        <Text position={[0, -1.5, 0]} fontSize={0.4} color="white" anchorX="center" anchorY="middle">
-          {label}
-        </Text>
-      </mesh>
+      <group position={position} onClick={(e) => { e.stopPropagation(); onClick?.(); }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
+        <mesh scale={hovered || active ? 1.2 : 1}>
+          <sphereGeometry args={[1, 32, 32]} />
+          <meshStandardMaterial 
+            color={color} 
+            emissive={color} 
+            emissiveIntensity={active || hovered ? 2 : 0.5} 
+            wireframe={!active && !hovered}
+            transparent
+            opacity={0.8}
+          />
+        </mesh>
+        <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+          <Text position={[0, -1.8, 0]} fontSize={0.5} color="white" anchorX="center" anchorY="middle">
+            {label}
+          </Text>
+        </Billboard>
+      </group>
     </Float>
   );
 }
@@ -35,24 +40,52 @@ export default function App() {
   const [events, setEvents] = useState<Array<{ node: string; msg: string; kind?: string }>>([]);
   const [activeNode, setActiveNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    const sse = new EventSource('http://localhost:3001/stream');
-    sse.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data) as { node: string; msg: string; kind?: string };
-        setEvents(prev => [...prev, data]);
-        if (data.node !== 'system') setActiveNode(data.node);
-      } catch {
-        // ignore
-      }
-    };
-    return () => sse.close();
+    let sse: EventSource;
+    try {
+      sse = new EventSource('http://127.0.0.1:3001/stream');
+      sse.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data) as { node: string; msg: string; kind?: string };
+          setEvents(prev => [...prev, data]);
+          if (data.node !== 'system') setActiveNode(data.node);
+          
+          if (data.msg === 'Demo flow completed successfully.' || data.msg.startsWith('Error:')) {
+            setIsRunning(false);
+          }
+        } catch {
+          // ignore
+        }
+      };
+      sse.onopen = () => {
+        setStatus('Connected');
+      };
+      sse.onerror = () => {
+        setStatus('Connection Error');
+      };
+    } catch (e) {
+      console.error(e);
+    }
+    return () => sse?.close();
   }, []);
 
   const startDemo = async () => {
+    if (isRunning) return;
+    setIsRunning(true);
     setEvents([]);
-    await fetch('http://localhost:3001/start', { method: 'POST' });
+    setStatus('Starting...');
+    try {
+      const res = await fetch('http://127.0.0.1:3001/start', { method: 'POST' });
+      if (!res.ok) throw new Error('API Error');
+      setStatus('Running Demo');
+    } catch (err) {
+      console.error(err);
+      setStatus('Failed to Start');
+      setIsRunning(false);
+    }
   };
 
   const filteredEvents = selectedNode 
@@ -68,19 +101,29 @@ export default function App() {
             <Brain className="w-8 h-8 text-green-400" />
             <h1 className="text-2xl font-bold tracking-widest text-green-400">GENESIS</h1>
           </div>
-          <button onClick={startDemo} className="flex items-center gap-2 bg-green-500/20 hover:bg-green-500/40 text-green-400 px-4 py-2 rounded-lg transition-colors border border-green-500/30">
-            <Play className="w-4 h-4" /> START DEMO
+          <button 
+            onClick={startDemo} 
+            disabled={isRunning || status === 'Connection Error'}
+            className="flex items-center gap-2 bg-green-500/20 hover:bg-green-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-green-400 px-4 py-2 rounded-lg transition-colors border border-green-500/30"
+          >
+            {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {isRunning ? 'RUNNING...' : 'START DEMO'}
           </button>
+        </div>
+
+        <div className="mb-4 text-xs font-mono text-gray-500 flex justify-between">
+          <span>Backend Status: {status || 'Connecting...'}</span>
+          <span>{events.length} events</span>
         </div>
 
         {selectedNode && (
           <div className="mb-4 flex items-center justify-between bg-blue-900/30 border border-blue-500/30 p-3 rounded-lg">
             <span className="text-blue-400 uppercase font-bold tracking-wider">{selectedNode} PANEL</span>
-            <button onClick={() => setSelectedNode(null)} className="text-xs text-gray-400 hover:text-white">CLEAR FILTER</button>
+            <button onClick={() => setSelectedNode(null)} className="text-xs bg-black/50 px-2 py-1 rounded text-gray-300 hover:text-white border border-gray-700">CLEAR FILTER</button>
           </div>
         )}
         
-        <div className="flex-1 overflow-y-auto space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
           <h2 className="text-sm text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4" /> Live Event Stream {selectedNode ? `(Filtered)` : ''}
           </h2>
@@ -108,7 +151,7 @@ export default function App() {
           <SystemNode position={[-4, 4, 0]} color="#4ade80" label="Planner" active={activeNode === 'planner'} onClick={() => setSelectedNode('planner')} />
           <SystemNode position={[4, 4, 0]} color="#60a5fa" label="Architect" active={activeNode === 'architect'} onClick={() => setSelectedNode('architect')} />
           <SystemNode position={[-4, 0, 0]} color="#f472b6" label="Builder" active={activeNode === 'builder'} onClick={() => setSelectedNode('builder')} />
-          <SystemNode position={[4, 0, 0]} color="#facc15" label="QA / Test" active={activeNode === 'qa'} onClick={() => setSelectedNode('qa')} />
+          <SystemNode position={[4, 0, 0]} color="#facc15" label="QA" active={activeNode === 'qa'} onClick={() => setSelectedNode('qa')} />
           <SystemNode position={[-4, -4, 0]} color="#ef4444" label="Security" active={activeNode === 'security'} onClick={() => setSelectedNode('security')} />
           <SystemNode position={[4, -4, 0]} color="#a855f7" label="Verifier" active={activeNode === 'verifier'} onClick={() => setSelectedNode('verifier')} />
           <SystemNode position={[0, 0, -4]} color="#ffffff" label="Artifact" active={activeNode === 'artifact'} onClick={() => setSelectedNode('artifact')} />
@@ -120,7 +163,7 @@ export default function App() {
           <ConnectionLine start={[-4, -4, 0]} end={[4, -4, 0]} active={activeNode === 'security' || activeNode === 'verifier'} />
           <ConnectionLine start={[4, -4, 0]} end={[0, 0, -4]} active={activeNode === 'verifier'} />
 
-          <OrbitControls enableZoom={true} autoRotate autoRotateSpeed={0.5} />
+          <OrbitControls enableZoom={true} autoRotate autoRotateSpeed={0.5} makeDefault />
         </Canvas>
 
         {/* Overlay UI */}

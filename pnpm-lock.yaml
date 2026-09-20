@@ -56,6 +56,18 @@ importers:
       '@genesis/graph':
         specifier: workspace:*
         version: link:../../packages/graph
+      '@genesis/memory':
+        specifier: workspace:*
+        version: link:../../packages/memory
+      '@genesis/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@genesis/reasoning':
+        specifier: workspace:*
+        version: link:../../packages/reasoning
+      '@genesis/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
       '@genesis/verification':
         specifier: workspace:*
         version: link:../../packages/verification

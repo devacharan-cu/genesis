@@ -20,6 +20,9 @@
     "@genesis/core-types": "workspace:*",
     "@genesis/factory": "workspace:*",
     "@genesis/graph": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/protocol": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
     "@genesis/verification": "workspace:*",
     "cors": "^2.8.5",
     "express": "^5.0.0"
