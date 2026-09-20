@@ -130,6 +130,7 @@ export default defineConfig({
       '@genesis/secrets': pkg('secrets'),
       '@genesis/infrastructure': pkg('infrastructure'),
       '@genesis/cloud': pkg('cloud'),
+      '@genesis/console': pkg('console'),
       '@genesis/protocol': pkg('protocol'),
       '@genesis/ledger': pkg('ledger'),
       '@genesis/memory': pkg('memory'),

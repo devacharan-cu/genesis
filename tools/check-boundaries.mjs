@@ -127,6 +127,30 @@ const ALLOWED_WORKSPACE_DEPS = {
       'testkit',
     ],
   reasoning: ['core-types'],
+  // A pure fold from ledger events to what an operator sees. Derived state:
+  // it decides nothing, stores nothing and writes nothing, so nothing depends
+  // on it but the apps.
+  //
+  // Production code here imports ONLY core-types, and `console.test.ts`
+  // asserts that. The rest of this list exists so the tests can fold the events
+  // a REAL factory run produces: a console tested against hand-written
+  // fixtures would agree with the fixtures rather than with the system.
+  console: [
+      'core-types',
+      'protocol',
+      'ledger',
+      'memory',
+      'graph',
+      'projections',
+      'cognition',
+      'reasoning',
+      'sandbox',
+      'adapters-sandbox-local',
+      'verification',
+      'agents',
+      'core',
+      'factory',
+    ],
   sandbox: ['core-types'],
   'adapters-sandbox-local': ['core-types', 'sandbox'],
   verification: ['core-types'],

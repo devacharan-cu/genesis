@@ -32,6 +32,7 @@
       "@genesis/secrets": ["packages/secrets/src/index.ts"],
       "@genesis/infrastructure": ["packages/infrastructure/src/index.ts"],
       "@genesis/cloud": ["packages/cloud/src/index.ts"],
+      "@genesis/console": ["packages/console/src/index.ts"],
       "@genesis/protocol": ["packages/protocol/src/index.ts"],
       "@genesis/ledger": ["packages/ledger/src/index.ts"],
       "@genesis/memory": ["packages/memory/src/index.ts"],

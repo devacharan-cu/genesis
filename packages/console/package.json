@@ -1,0 +1,28 @@
+{
+  "name": "@genesis/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A pure fold from ledger events to what an operator sees. Derived state: it decides nothing and writes nothing.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@genesis/adapters-sandbox-local": "workspace:*",
+    "@genesis/agents": "workspace:*",
+    "@genesis/cognition": "workspace:*",
+    "@genesis/core": "workspace:*",
+    "@genesis/factory": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/protocol": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
+    "@genesis/sandbox": "workspace:*",
+    "@genesis/testkit": "workspace:*",
+    "@genesis/verification": "workspace:*"
+  }
+}

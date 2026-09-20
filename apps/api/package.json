@@ -1,16 +1,17 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "",
+  "description": "The GENESIS console API: creates projects, runs the real factory, streams the ledger.",
   "main": "index.js",
   "scripts": {
-    "dev": "npx tsx index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch index.ts",
+    "start": "tsx index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "@genesis/adapters-sandbox-local": "workspace:*",
     "@genesis/adapters-sqlite": "workspace:*",
@@ -25,7 +26,10 @@
     "@genesis/reasoning": "workspace:*",
     "@genesis/verification": "workspace:*",
     "cors": "^2.8.5",
-    "express": "^5.0.0"
+    "express": "^5.0.0",
+    "@genesis/console": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/agents": "workspace:*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
