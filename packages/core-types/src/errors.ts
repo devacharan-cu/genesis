@@ -19,6 +19,12 @@ export type GenesisErrorCode =
   | 'COGNITIVE_RULE_VIOLATION'
   | 'REASONING_FAILED'
   | 'MIRROR_DIVERGENCE'
+  // A token could not be turned into a verified subject (ADR-0026 1). Never
+  // 'not found': a refusal that distinguished an unknown subject from a wrong
+  // secret would be an enumeration oracle (SPEC-06 2).
+  | 'AUTHENTICATION_FAILED'
+  // A SecretRef pointed at nothing this resolver could read (SPEC-06 5).
+  | 'SECRET_UNRESOLVED'
   | 'NOT_FOUND';
 
 export class GenesisError extends Error {

@@ -82,7 +82,7 @@ describe('ExperimentEngine', () => {
   test('records EXPERIMENT_FAILED for a generic error', async () => {
     const ledger = new InMemoryEventLedger();
     const sandbox = new MockSandboxProvider([
-      { matchCommand: ['test'], error: new Error('generic error') }
+      { matchCommand: ['test'], error: new Error('generic error') as unknown as SandboxError }
     ]);
     const engine = new ExperimentEngine(ledger, sandbox);
     
@@ -104,7 +104,7 @@ describe('ExperimentEngine', () => {
   test('records EXPERIMENT_FAILED for a non-error throw', async () => {
     const ledger = new InMemoryEventLedger();
     const sandbox = new MockSandboxProvider([
-      { matchCommand: ['test'], error: 'string error' }
+      { matchCommand: ['test'], error: 'string error' as unknown as SandboxError }
     ]);
     const engine = new ExperimentEngine(ledger, sandbox);
     

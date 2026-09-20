@@ -9,8 +9,25 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1136.0",
+    "@aws-sdk/client-dynamodb": "3.1136.0",
+    "@aws-sdk/client-ecs": "3.1136.0",
+    "@aws-sdk/client-eventbridge": "3.1136.0",
+    "@aws-sdk/client-s3": "3.1136.0",
+    "@aws-sdk/client-secrets-manager": "3.1136.0",
+    "@aws-sdk/client-sfn": "3.1136.0",
+    "@aws-sdk/client-ssm": "3.1136.0",
+    "@aws-sdk/lib-dynamodb": "3.1136.0",
+    "@genesis/blob": "workspace:*",
     "@genesis/core-types": "workspace:*",
-    "@genesis/reasoning": "workspace:*"
+    "@genesis/graph": "workspace:*",
+    "@genesis/identity": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
+    "@genesis/sandbox": "workspace:*",
+    "@genesis/secrets": "workspace:*",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@genesis/testkit": "workspace:*"

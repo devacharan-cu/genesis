@@ -1,0 +1,38 @@
+{
+  "name": "@genesis/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The composition root: wires ports to adapters from configuration, and hosts the cloud handlers. The only package that may name both a port and its cloud adapter.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/adapters-aws": "workspace:*",
+    "@genesis/agents": "workspace:*",
+    "@genesis/blob": "workspace:*",
+    "@genesis/cognition": "workspace:*",
+    "@genesis/context": "workspace:*",
+    "@genesis/core": "workspace:*",
+    "@genesis/core-types": "workspace:*",
+    "@genesis/experiment": "workspace:*",
+    "@genesis/factory": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/identity": "workspace:*",
+    "@genesis/infrastructure": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/protocol": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
+    "@genesis/sandbox": "workspace:*",
+    "@genesis/secrets": "workspace:*",
+    "@genesis/verification": "workspace:*",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@genesis/adapters-sandbox-local": "workspace:*",
+    "@genesis/adapters-sqlite": "workspace:*",
+    "@genesis/testkit": "workspace:*"
+  }
+}

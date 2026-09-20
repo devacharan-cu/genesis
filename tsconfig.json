@@ -27,6 +27,11 @@
     "baseUrl": ".",
     "paths": {
       "@genesis/core-types": ["packages/core-types/src/index.ts"],
+      "@genesis/blob": ["packages/blob/src/index.ts"],
+      "@genesis/identity": ["packages/identity/src/index.ts"],
+      "@genesis/secrets": ["packages/secrets/src/index.ts"],
+      "@genesis/infrastructure": ["packages/infrastructure/src/index.ts"],
+      "@genesis/cloud": ["packages/cloud/src/index.ts"],
       "@genesis/protocol": ["packages/protocol/src/index.ts"],
       "@genesis/ledger": ["packages/ledger/src/index.ts"],
       "@genesis/memory": ["packages/memory/src/index.ts"],

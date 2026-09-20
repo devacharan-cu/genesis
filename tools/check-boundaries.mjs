@@ -58,6 +58,13 @@ const ALLOWED_WORKSPACE_DEPS = {
   // the shared vocabulary and nothing else, so it cannot write anything
   // (ADR-0020 §1, amending this table's original `protocol: []`).
   protocol: ['core-types'],
+  // Content-addressed bytes. It stores what it is given and hashes it; it
+  // knows nothing about what a blob means.
+  blob: ['core-types'],
+  // Who a token belongs to. Nothing else: authorisation is the core's.
+  identity: ['core-types'],
+  // Where a secret lives, and how to resolve it. It never stores one.
+  secrets: ['core-types'],
   ledger: ['core-types'],
   memory: ['core-types'],
   graph: ['core-types'],
@@ -73,7 +80,52 @@ const ALLOWED_WORKSPACE_DEPS = {
   // each assembly.
   context: ['core-types', 'memory', 'graph', 'projections', 'cognition'],
   'adapters-sqlite': ['core-types', 'ledger', 'memory', 'graph', 'projections'],
-  'adapters-aws': ['core-types', 'ledger', 'memory', 'graph', 'projections', 'reasoning'],
+  // The only package permitted to import the AWS SDK. It implements ports and
+  // reaches nothing that decides: no cognition, no core, no factory
+  // (ADR-0024 2).
+  'adapters-aws': [
+      'core-types',
+      'ledger',
+      'memory',
+      'graph',
+      'projections',
+      'reasoning',
+      'blob',
+      'identity',
+      'secrets',
+      'sandbox',
+      'testkit',
+    ],
+  // Typed emitters for the deployed stack. It reads the canonical vocabulary
+  // and writes a template; it talks to nothing (ADR-0026 2).
+  infrastructure: ['core-types', 'protocol'],
+  // The composition root: it wires ports to adapters and hosts the handlers.
+  // It is the only package that may name both a port and its cloud adapter.
+  cloud: [
+      'core-types',
+      'protocol',
+      'ledger',
+      'memory',
+      'graph',
+      'projections',
+      'cognition',
+      'context',
+      'reasoning',
+      'sandbox',
+      'blob',
+      'identity',
+      'secrets',
+      'agents',
+      'core',
+      'factory',
+      'verification',
+      'experiment',
+      'adapters-aws',
+      'adapters-sqlite',
+      'adapters-sandbox-local',
+      'infrastructure',
+      'testkit',
+    ],
   reasoning: ['core-types'],
   sandbox: ['core-types'],
   'adapters-sandbox-local': ['core-types', 'sandbox'],
@@ -96,7 +148,21 @@ const ALLOWED_WORKSPACE_DEPS = {
       'experiment',
       'verification',
     ],
-  testkit: ['core-types', 'protocol', 'ledger', 'memory', 'graph', 'projections', 'cognition', 'reasoning', 'sandbox', 'core'],
+  testkit: [
+      'core-types',
+      'protocol',
+      'ledger',
+      'memory',
+      'graph',
+      'projections',
+      'cognition',
+      'reasoning',
+      'sandbox',
+      'blob',
+      'identity',
+      'secrets',
+      'core',
+    ],
   // Agents get the protocol and the types. No stores, no ledger, no cognition,
   // no reasoning provider, no core, no adapters. That is what makes "an agent
   // cannot mutate canonical state" a property of this graph rather than a

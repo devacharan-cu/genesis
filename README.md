@@ -135,7 +135,7 @@ failing.
 | **P5** | Experiments, sandbox, verification engine | 🟢 Done: Experiment engine, secure sandbox port, local sandbox adapter with timeout and abort handling, deterministic verification engine state machine, event recording for evidence (ADR-0019) |
 | **P6** | Agents (proposal-based) | 🟢 Done: the typed agent protocol (nine message kinds, strict bodies, an agent manifest that can only narrow), the task state machine, the agent registry, four roles (Planner, Architect, Researcher, and a deterministic Verifier), and the agent runtime — assignment, bounded dispatch, typed failure with self-model signatures, bounded retry, verification handoff and a replayable task projection. Agents hold no store and no provider, which `check-boundaries.mjs` enforces (ADR-0020). Parallel agents are deliberately not taken |
 | **P7** | Software factory and self-repair loop | 🟢 Done: reasoning purposes so a role varies what it asks for without any wording leaving the core, the artifact door recording produced files at `GENERATED`, the Builder, QA, Security and Repair roles, impact leases with staleness detection, the eight-stage factory pipeline with a bounded repair loop, and the verified-artifact projection whose state comes from the P5 engine and nowhere else (ADR-0021, ADR-0022, ADR-0023). Security review is a pattern-based reviewer over artifact text and says so |
-| **P8** | AWS deployment | ⬜ |
+| **P8** | AWS deployment | 🟢 Done |
 
 Full phase definitions and exit criteria:
 [master spec §8](docs/architecture/00-MASTER-SPEC.md#8-phasing).

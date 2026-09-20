@@ -8,14 +8,17 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@genesis/core-types": "workspace:*",
-    "@genesis/ledger": "workspace:*",
-    "@genesis/memory": "workspace:*",
-    "@genesis/graph": "workspace:*",
-    "@genesis/projections": "workspace:*",
+    "@genesis/blob": "workspace:*",
     "@genesis/cognition": "workspace:*",
     "@genesis/core": "workspace:*",
-    "@genesis/reasoning": "workspace:*"
+    "@genesis/core-types": "workspace:*",
+    "@genesis/graph": "workspace:*",
+    "@genesis/identity": "workspace:*",
+    "@genesis/ledger": "workspace:*",
+    "@genesis/memory": "workspace:*",
+    "@genesis/projections": "workspace:*",
+    "@genesis/reasoning": "workspace:*",
+    "@genesis/secrets": "workspace:*"
   },
   "devDependencies": {
     "vitest": "2.1.9"

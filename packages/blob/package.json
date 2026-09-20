@@ -1,0 +1,16 @@
+{
+  "name": "@genesis/blob",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BlobStore port: content-addressed immutable bytes for evidence, artifacts and logs (SPEC-05 4, ADR-0026).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}

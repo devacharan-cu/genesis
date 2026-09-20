@@ -84,6 +84,37 @@ const SAFETY_CRITICAL = [
   'packages/factory/src/events.ts', // a factory run's record
   'packages/factory/src/verified-artifacts.ts', // the answer to "is it done"
   'packages/factory/src/factory.ts', // intent to verified artifact, all recorded
+  // P8: the cloud runtime. A silent failure in any of these lets a deployment
+  // believe something the code does not, or lets a boundary exist only on paper.
+  'packages/blob/src/port.ts', // evidence is bytes that hash to their reference (SPEC-05 4)
+  'packages/blob/src/in-memory.ts', // the local store the whole suite's evidence passes through
+  'packages/identity/src/port.ts', // a subject is what a HUMAN_DECISION is attributed to
+  'packages/identity/src/development.ts', // a local identity that must not become a default credential
+  'packages/secrets/src/port.ts', // a secret is a pointer, never a stored value (SPEC-06 5)
+  'packages/secrets/src/in-memory.ts', // the resolver the suite proves redaction against
+  'packages/graph/src/engine.ts', // G1-G13 over any storage, so a second store inherits them
+  'packages/adapters-aws/src/dynamodb/client.ts', // the one place the SDK is reached from
+  'packages/adapters-aws/src/dynamodb/model.ts', // the semantics every conformance run stands on
+  'packages/adapters-aws/src/dynamodb/schema.ts', // project isolation as a property of the key (ADR-0008 rule 7)
+  'packages/adapters-aws/src/dynamodb/ledger.ts', // conditional append: the hash chain under concurrency
+  'packages/adapters-aws/src/dynamodb/memory.ts', // version ordering and authority ceilings in the cloud
+  'packages/adapters-aws/src/dynamodb/graph.ts', // cross-project ids refused rather than answered null
+  'packages/adapters-aws/src/dynamodb/projections.ts', // snapshots never move backwards
+  'packages/adapters-aws/src/s3-blob.ts', // content addressing is the storage layout, not a convention
+  'packages/adapters-aws/src/cognito.ts', // a token accepted that should not be is unattributable authority
+  'packages/adapters-aws/src/secrets.ts', // resolves at the moment of use, and never caches
+  'packages/adapters-aws/src/eventbridge.ts', // a notification that must never carry a payload
+  'packages/infrastructure/src/template.ts', // a malformed stack fails here or halfway through a deploy
+  'packages/infrastructure/src/policy.ts', // the trust boundaries, as IAM sees them
+  'packages/infrastructure/src/stack.ts', // what is actually granted to what
+  'packages/infrastructure/src/state-machines.ts', // a repair cannot reach VERIFY in the deployment either
+  'packages/infrastructure/src/posture.ts', // the checks that can fail a deployment
+  'packages/cloud/src/config.ts', // a misconfigured deployment fails at start-up, not at the point of use
+  'packages/cloud/src/runtime.ts', // the composition root: which adapter every port is bound to
+  'packages/cloud/src/stream.ts', // a stream record is a signal, never a second copy of history
+  'packages/cloud/src/handlers.ts', // idempotent folds and precise batch failures
+  'packages/cloud/src/api.ts', // the only place a HUMAN_DECISION is minted in a deployment
+  'packages/cloud/src/bindings.ts', // where the deployment and the runtime are checked against each other
 ];
 
 const safetyCriticalThresholds = Object.fromEntries(
@@ -94,6 +125,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@genesis/core-types': pkg('core-types'),
+      '@genesis/blob': pkg('blob'),
+      '@genesis/identity': pkg('identity'),
+      '@genesis/secrets': pkg('secrets'),
+      '@genesis/infrastructure': pkg('infrastructure'),
+      '@genesis/cloud': pkg('cloud'),
       '@genesis/protocol': pkg('protocol'),
       '@genesis/ledger': pkg('ledger'),
       '@genesis/memory': pkg('memory'),

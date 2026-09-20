@@ -1,0 +1,16 @@
+{
+  "name": "@genesis/identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "IdentityProvider port: turning a token into a verified subject, so a HUMAN_DECISION can be attributed (SPEC-07 3.12, ADR-0026).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genesis/core-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@genesis/testkit": "workspace:*"
+  }
+}
